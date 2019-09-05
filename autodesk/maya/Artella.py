@@ -12,12 +12,14 @@ import urllib
 import urllib2
 import urlparse
 
-import maya.OpenMaya as OpenMaya
-import maya.OpenMayaMPx as OpenMayaMPx
-import maya.cmds
-import maya.mel
-import maya.utils
-
+try:
+    import maya.OpenMaya as OpenMaya
+    import maya.OpenMayaMPx as OpenMayaMPx
+    import maya.cmds
+    import maya.mel
+    import maya.utils
+except Exception as e:
+    print "maya libs not available... %s" % e
 
 # Force stack trace on before we do any further imports
 try:
@@ -27,8 +29,8 @@ try:
     if whatIs != 'Unknown':
         gLastFocusedCommandReporter = maya.mel.eval(
             '$tmp = $gLastFocusedCommandReporter')
-except RuntimeError:
-    pass
+except Exception as e:
+    print "error setting debug help... %s" % e
 
 
 # -----------------------------------------------------------------------------
@@ -460,7 +462,7 @@ def convert_file_paths(maya_obj=None):
 
             log_debug("evaluating dir %s" % maya_dir)
 
-            uri_dir = maya_path_to_uri(maya_dir)
+            uri_dir = local_path_to_uri(maya_dir)
             if maya_dir == uri_dir:
                 log_warning("unable to translate maya dir "
                             "to uri: %s" % maya_dir)
@@ -593,7 +595,7 @@ def make_new_version(obj):
 
     if result == "Save":
         comment = maya.cmds.promptDialog(query=True, text=True)
-        cms_uri = maya_path_to_uri(file_)
+        cms_uri = local_path_to_uri(file_)
         rsp = get_client().upload(cms_uri, comment)
         if rsp.get('error'):
             msg = "Unable to checkin file %s\n%s\n%s" % (
@@ -656,7 +658,7 @@ def checkout_file_if_necessary(force=False):
         if is_already_uri_path(file_):
             cms_uri = file_
         else:
-            cms_uri = maya_path_to_uri(file_)
+            cms_uri = local_path_to_uri(file_)
 
         uri_parts = urlparse.urlparse(cms_uri)
         if not get_client().checkout_file(uri_parts.path):
@@ -685,7 +687,7 @@ def unlock_file(maya_path):
     if is_already_uri_path:
         cms_uri = maya_path
     else:
-        cms_uri = maya_path_to_uri(maya_path)
+        cms_uri = local_path_to_uri(maya_path)
 
     uri_parts = urlparse.urlparse(cms_uri)
     if not get_client().unlock_file(uri_parts.path):
@@ -704,7 +706,7 @@ def is_locked_file(maya_path):
         current storage worksapce.
     """
     if not is_already_uri_path(maya_path):
-        maya_path = maya_path_to_uri(maya_path)
+        maya_path = local_path_to_uri(maya_path)
     rsp = get_status(maya_path)
 
     locked_machine_id = rsp.get('machine_id')
@@ -730,7 +732,7 @@ def is_published(maya_path):
 
 def get_status(maya_path):
     if not is_already_uri_path(maya_path):
-        maya_path = maya_path_to_uri(maya_path)
+        maya_path = local_path_to_uri(maya_path)
     rsp = get_client().status(maya_path)
     log_debug("status response: %s" % rsp)
     return rsp
@@ -874,7 +876,7 @@ def is_already_uri_path(maya_path, prefix=None):
     return uri.scheme == ArtSchemeResolver.kPluginURIScheme
 
 
-def maya_path_to_uri(maya_path, prefix=None, preserve_maya_fmt=False):
+def local_path_to_uri(maya_path, prefix=None, preserve_maya_fmt=False):
     if prefix:
         # TODO: handle TCL based path strings for Pixar nodes
         log_warning("not implemented yet support for TCL")
@@ -896,7 +898,8 @@ def maya_path_to_uri(maya_path, prefix=None, preserve_maya_fmt=False):
     # 'artella:path/to/file.ext'
     fixed_path = urlparse.urlunparse(url_parts)
     if not is_already_uri_path(fixed_path):
-        log_error("failed to translate %s to uri: %s" % (maya_path, fixed_path))
+        log_error("failed to translate %s to uri: %s"
+                  % (maya_path, fixed_path))
         return maya_path
     return fixed_path
 
@@ -1029,7 +1032,6 @@ class ArtellaAppClient():
         self._port = port
         self._auth_header = None
         self._batch_ids = set()
-        self._files_down = set()
         self._socket_buffer = None
 
     def auth_challenge_update(self):
@@ -1207,17 +1209,15 @@ class ArtellaAppClient():
         _resolver_cache[path] = rsp
         return rsp
 
-    def download(self, cms_file_uri_list):
+    def download(self, artella_uri_list):
         """ pull the file from the remote server
         """
         handles = set()
-        for uri in cms_file_uri_list:
+        for uri in artella_uri_list:
             if not is_already_uri_path(uri):
-                uri = maya_path_to_uri(uri)
+                uri = local_path_to_uri(uri)
             uri_parts = urlparse.urlparse(uri)
             handle = uri_parts.path
-            if handle in self._files_down:
-                continue
             handles.add(handle)
 
         if not handles:
@@ -1236,13 +1236,12 @@ class ArtellaAppClient():
         rsp = self._communicate(req, json.dumps(payload))
         if 'error' in rsp:
             return rsp
-        self._files_down |= handles
         return self.track_response(rsp)
 
-    def upload(self, cms_file_uri, comment=""):
+    def upload(self, artella_uri, comment=""):
         """ upload an updated file to the remote server
         """
-        uri_parts = urlparse.urlparse(cms_file_uri)
+        uri_parts = urlparse.urlparse(artella_uri)
         handle = uri_parts.path
         payload = {
             'handles': [handle],
@@ -1258,11 +1257,11 @@ class ArtellaAppClient():
             return rsp
         return self.track_response(rsp)
 
-    def checkout_file(self, cms_file_uri):
+    def checkout_file(self, artella_uri):
         """ lock it
         """
         payload = {
-            'handle': cms_file_uri,
+            'handle': artella_uri,
             'note': 'Artella for Maya checkout'
         }
         req = urllib2.Request(
@@ -1276,11 +1275,11 @@ class ArtellaAppClient():
 
         return rsp.get('response', False) and rsp.get('status_code', 0) == 200
 
-    def unlock_file(self, cms_file_uri):
+    def unlock_file(self, artella_uri):
         """ unlock it
         """
         payload = {
-            'handle': cms_file_uri
+            'handle': artella_uri
         }
         req = urllib2.Request(
             "http://%s:%s/v2/localserve/unlock" %
@@ -1293,10 +1292,10 @@ class ArtellaAppClient():
 
         return rsp.get('response', False) and rsp.get('status_code', 0) == 200
 
-    def status(self, cms_file_uri):
+    def status(self, artella_uri):
         """ get the status of a file from the remote server
         """
-        uri_parts = urlparse.urlparse(cms_file_uri)
+        uri_parts = urlparse.urlparse(artella_uri)
         params = urllib.urlencode({'handle': uri_parts.path})
         req = urllib2.Request(
             "http://%s:%s/v2/localserve/fileinfo?%s" %
@@ -1307,12 +1306,11 @@ class ArtellaAppClient():
         # TODO: once we have a reliable way to resolve the record handle
         # back into the abs path, iterate and match on the file name
         for k, v in rsp.iteritems():
-            if os.path.basename(k) == os.path.basename(cms_file_uri):
+            if os.path.basename(k) == os.path.basename(artella_uri):
                 return v.get('remote_info', {})
         return rsp
 
     def get_progress(self):
-        self._files_down = set()
 
         tx_count_done = 0
         tx_count_total = 0
@@ -1338,13 +1336,6 @@ class ArtellaAppClient():
             tx_count_total += tct
             tx_bytes_done += tbd
             tx_bytes_total += tbt
-            active_tx = v.get('transfers')
-            if active_tx:
-                active_down = set(
-                    [t['handle_path'] for t in active_tx
-                     if t['direction'] == 'download']
-                )
-                self._files_down |= active_down
 
         self._batch_ids -= batches_complete
 
@@ -1363,7 +1354,6 @@ class ArtellaAppClient():
         )
 
     def pause_downloads(self):
-        self._files_down = set()
         req = urllib2.Request(
             "http://%s:%s/v2/localserve/pause/pause/downloads" %
             (self._host, self._port))
