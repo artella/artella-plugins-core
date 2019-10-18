@@ -226,6 +226,11 @@ def before_save(*args):
     """
     validate_env_for_callback("BeforeSave")
 
+    checked_out = checkout_file_if_necessary()
+    if not checked_out:
+        log_error("unable to checkout file to make new version")
+        return
+
     # convert paths to remote scheme
     convert_file_paths()
     return
@@ -375,7 +380,7 @@ def log_warning(msg):
     print "Artella WARNING: %s" % msg
 
 
-DEBUG = True
+DEBUG = False
 
 
 def log_debug(msg):
@@ -945,7 +950,10 @@ class ArtSchemeResolver(OpenMayaMPx.MPxFileResolver):
         return (self.kPluginURIScheme)
 
     def resolveURI(self, URI, mode):
-        return uri_to_local_path(URI.asString())
+        log_debug("resolver URI: %s" % URI.asString())
+        local_path = uri_to_local_path(URI.asString())
+        log_debug("resolver local_path: %s" % local_path)
+        return local_path
 
     def performAfterSaveURI(self, URI, resolvedFullPath):
         uri = URI.asString()
