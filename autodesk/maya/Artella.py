@@ -647,11 +647,11 @@ def checkout_file_if_necessary(force=False):
     elif force or not in_edit_mode:
         result = "Yes"
         if not force and not in_edit_mode:
-            msg = "%s needs to be in Edit Mode to save your file - " \
-                "would you like to turn edit mode on now?" \
+            msg = "%s needs to be in locked in order to save your file - " \
+                "would you like to lock the file now?" \
                 % os.path.basename(file_)
             result = maya.cmds.confirmDialog(
-                title="Artella Edit Mode",
+                title="Artella",
                 message=msg,
                 button=["Yes", "No"],
                 cancelButton="No",
@@ -669,7 +669,7 @@ def checkout_file_if_necessary(force=False):
         if not get_client().checkout_file(uri_parts.path):
             msg = "Failed to lock %s" % os.path.basename(file_)
             maya.cmds.warning(msg)
-            maya.cmds.confirmDialog(title="Artella Failed to Lock file",
+            maya.cmds.confirmDialog(title="Artella",
                                     message=msg,
                                     button=["OK"])
             return False
@@ -680,7 +680,7 @@ def checkout_file_if_necessary(force=False):
 def unlock_file(maya_path):
     msg = "you have this file locked in Artella.\nUnlock it now?"
     result = maya.cmds.confirmDialog(
-        title="Artella file is locked",
+        title="Artella",
         message=msg,
         button=["Yes", "No"],
         cancelButton="No",
@@ -699,7 +699,7 @@ def unlock_file(maya_path):
         msg = "Failed to unlock the file.\nTry unlocking it "\
               "from the Artella Files Area in the web browser."
         maya.cmds.warning(msg)
-        maya.cmds.confirmDialog(title="Artella Failed to Lock file",
+        maya.cmds.confirmDialog(title="Artella",
                                 message=msg,
                                 button=["OK"])
     return
