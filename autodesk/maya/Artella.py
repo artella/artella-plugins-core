@@ -150,8 +150,9 @@ def connect_to_artella_local_server():
     return
 
 
-def convert_paths_and_get_dependent_files():
-    convert_file_paths()
+def convert_paths_and_get_dependent_files(do_convert=False):
+    if do_convert:
+        convert_file_paths()
 
     global _asked_for_get_deps
 
@@ -216,9 +217,11 @@ def deregister_commands(plugin):
             raise e
     return
 
+
 # -----------------------------------------------------------------------------
 # Maya Callbacks
 # -----------------------------------------------------------------------------
+DO_CONVERT = False
 
 
 def before_save(*args):
@@ -232,7 +235,8 @@ def before_save(*args):
         return
 
     # convert paths to remote scheme
-    convert_file_paths()
+    if DO_CONVERT:
+        convert_file_paths()
     return
 
 
@@ -331,6 +335,9 @@ def handle_realtime_message(msg):
         pass
     elif command_name == 'transfer-status-change':
         pass
+    elif command_name == 'version-check':
+        # do we have a way to version this file?
+        pass
     else:
         log_warning("unknown command on websocket: %s" % command_name)
 
@@ -401,7 +408,7 @@ def dependent_files(unresolved=False):
                   "looking for dependent files: %s" % e)
         return list()
     if not dirs:
-        log_debug("file dirs not found")
+        log_debug("did not find any dependent directories")
         return list()
     for dir_name in dirs:
         try:
@@ -719,6 +726,7 @@ def is_locked_file(maya_path):
     raw = rsp.get('raw')
     if not raw:
         log_error("unable to get remote details for file %s" % maya_path)
+        log_debug("response data: %s" % rsp)
         return False, False
 
     locked_by = raw.get('locked_by')
@@ -1234,7 +1242,7 @@ class ArtellaAppClient():
         payload = {
             'handles': list(handles),
             'recursive': False,
-            'replace_local': True
+            'replace_local': False
         }
         log_debug("   request payload orig: %s" % payload)
         req = urllib2.Request(
@@ -1306,7 +1314,7 @@ class ArtellaAppClient():
         uri_parts = urlparse.urlparse(artella_uri)
         params = urllib.urlencode({'handle': uri_parts.path})
         req = urllib2.Request(
-            "http://%s:%s/v2/localserve/fileinfo?%s" %
+            "http://%s:%s/v2/localserve/fileinfo?%s&include-remote=true" %
             (self._host, self._port, params))
         rsp = self._communicate(req)
         if 'error' in rsp:
