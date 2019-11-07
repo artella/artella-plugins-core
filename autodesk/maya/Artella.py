@@ -150,8 +150,8 @@ def connect_to_artella_local_server():
     return
 
 
-def convert_paths_and_get_dependent_files(do_convert=False):
-    if do_convert:
+def convert_paths_and_get_dependent_files():
+    if DO_CONVERT:
         convert_file_paths()
 
     global _asked_for_get_deps
@@ -167,7 +167,7 @@ def convert_paths_and_get_dependent_files(do_convert=False):
 
 
 def setup_workspace():
-    ws = get_client().get_local_root()
+    ws = maya.cmds.encodeString(get_client().get_local_root())
     maya.mel.eval('setProject "%s"' % ws.replace('\\', '\\\\'))
     maya.cmds.workspace(directory=ws)
     maya.cmds.workspace(fileRule=['sourceImages', ''])
@@ -221,7 +221,7 @@ def deregister_commands(plugin):
 # -----------------------------------------------------------------------------
 # Maya Callbacks
 # -----------------------------------------------------------------------------
-DO_CONVERT = False
+DO_CONVERT = True
 
 
 def before_save(*args):
@@ -285,7 +285,7 @@ def validate_env_for_callback(callback_name):
         the guts of a Maya callback method.
     """
     log_info("validate_env_for_callback for %s" % callback_name)
-    local_root = get_client().get_local_root()
+    local_root = maya.cmds.encodeString(get_client().get_local_root())
     if local_root is not None:
         # trying everything here to be safe
         # note that all docs say this only affects child processes of the main
@@ -344,7 +344,7 @@ def handle_realtime_message(msg):
 
 def _realtime_open(msg):
     args = msg['data']
-    maya_file = args['ARTELLA_FILE']
+    maya_file = maya.cmds.encodeString(args['ARTELLA_FILE'])
     scenefile_type = maya.cmds.file(q=True, type=True)
     if isinstance(scenefile_type, list):
         scenefile_type = scenefile_type[0]
@@ -355,13 +355,13 @@ def _realtime_open(msg):
 
 def _realtime_import(msg):
     args = msg['data']
-    path = args['ARTELLA_FILE']
+    path = maya.cmds.encodeString(args['ARTELLA_FILE'])
     maya.cmds.file(path, i=True, preserveReferences=True)
 
 
 def _realtime_reference(msg):
     args = msg['data']
-    path = args['ARTELLA_FILE']
+    path = maya.cmds.encodeString(args['ARTELLA_FILE'])
     use_rename = maya.cmds.optionVar(q='referenceOptionsUseRenamePrefix')
     if use_rename:
         namespace = maya.cmds.optionVar(q='referenceOptionsRenamePrefix')
@@ -370,6 +370,7 @@ def _realtime_reference(msg):
         filename = os.path.basename(path)
         namespace, _ = os.path.splitext(filename)
         maya.cmds.file(path, reference=True, namespace=namespace)
+    log_debug("file('%s', reference=True, namespace=%s)" % (path, namespace))
 
 
 # -----------------------------------------------------------------------------
@@ -387,7 +388,7 @@ def log_warning(msg):
     print "Artella WARNING: %s" % msg
 
 
-DEBUG = False
+DEBUG = True
 
 
 def log_debug(msg):
@@ -876,7 +877,7 @@ def uri_to_local_path(uri_string):
         log_warning("unable to translate path %s %s"
                     % (uri_string, rsp.get('error')))
         return uri_string
-    return rsp.get('file_path')
+    return maya.cmds.encodeString(rsp.get('file_path'))
 
 
 def is_already_uri_path(maya_path, prefix=None):
@@ -904,7 +905,7 @@ def local_path_to_uri(maya_path, prefix=None, preserve_maya_fmt=False):
     url_parts = (
         ArtSchemeResolver.kPluginURIScheme,
         '',
-        rsp.get('handle'),
+        maya.cmds.encodeString(rsp.get('handle')),
         '',
         '',
         '')
