@@ -309,6 +309,7 @@ def validate_env_for_callback(callback_name):
 # Realtime interactions
 # -----------------------------------------------------------------------------
 def pass_msg_to_maya(json_data):
+    log_debug("pass_msg_to_maya: %s" % json_data)
     maya.utils.executeInMainThreadWithResult(
         handle_realtime_message, json_data)
 
@@ -316,7 +317,7 @@ def pass_msg_to_maya(json_data):
 
 
 def handle_realtime_message(msg):
-
+    log_debug("handle_realtime_message: %s" % msg)
     if not isinstance(msg, dict):
         log_warning("malformed realtime message: %s" % msg)
         return
@@ -328,7 +329,13 @@ def handle_realtime_message(msg):
     elif command_name == 'maya-import':
         _realtime_import(msg)
     elif command_name == 'maya-reference':
+        bfr = set(maya.cmds.ls(type='transform'))
         _realtime_reference(msg)
+        aft = set(maya.cmds.ls(type='transform'))
+        imported = aft - bfr
+        if len(imported) < 1:
+            time.sleep(0.25)
+            _realtime_reference(msg)
     elif command_name == 'authorization-ok':
         log_info("websocket connection successful")
     elif command_name == 'progress-summary':
@@ -363,14 +370,15 @@ def _realtime_reference(msg):
     args = msg['data']
     path = maya.cmds.encodeString(args['ARTELLA_FILE'])
     use_rename = maya.cmds.optionVar(q='referenceOptionsUseRenamePrefix')
+    rsp = None
     if use_rename:
         namespace = maya.cmds.optionVar(q='referenceOptionsRenamePrefix')
-        maya.cmds.file(path, reference=True, namespace=namespace)
+        rsp = maya.cmds.file(path, reference=True, namespace=namespace)
     else:
         filename = os.path.basename(path)
         namespace, _ = os.path.splitext(filename)
-        maya.cmds.file(path, reference=True, namespace=namespace)
-    log_debug("file('%s', reference=True, namespace=%s)" % (path, namespace))
+        rsp = maya.cmds.file(path, reference=True, namespace=namespace)
+    log_debug("%s = file('%s', reference=True, namespace=%s)" % (rsp, path, namespace))
 
 
 # -----------------------------------------------------------------------------
@@ -388,7 +396,7 @@ def log_warning(msg):
     print "Artella WARNING: %s" % msg
 
 
-DEBUG = True
+DEBUG = False
 
 
 def log_debug(msg):
@@ -1129,6 +1137,7 @@ class ArtellaAppClient():
         log_info("listening for commands on websocket")
         while True:
             msg = self._get_message()
+            log_debug("_pull_messages: %s" % msg)
             pass_msg_to_maya(msg)
 
     def _get_message(self):
