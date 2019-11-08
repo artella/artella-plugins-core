@@ -292,6 +292,7 @@ def validate_env_for_callback(callback_name):
         # this means that most of the time the env var needs to be set at
         # maya startup time via the Maya.env file or OS env
         #
+        log_debug("set local root in local env: %s" % local_root)
         os.environ[ALR] = local_root
         os.putenv(ALR, local_root)
         maya.mel.eval('putenv "%s" "%s"' % (ALR, local_root))
@@ -333,6 +334,9 @@ def handle_realtime_message(msg):
         _realtime_reference(msg)
         aft = set(maya.cmds.ls(type='transform'))
         imported = aft - bfr
+        log_debug(
+            "maya-reference event imported %d transforms" %
+            len(imported))
         if len(imported) < 1:
             time.sleep(0.25)
             _realtime_reference(msg)
@@ -367,18 +371,22 @@ def _realtime_import(msg):
 
 
 def _realtime_reference(msg):
-    args = msg['data']
-    path = maya.cmds.encodeString(args['ARTELLA_FILE'])
-    use_rename = maya.cmds.optionVar(q='referenceOptionsUseRenamePrefix')
-    rsp = None
-    if use_rename:
-        namespace = maya.cmds.optionVar(q='referenceOptionsRenamePrefix')
-        rsp = maya.cmds.file(path, reference=True, namespace=namespace)
-    else:
-        filename = os.path.basename(path)
-        namespace, _ = os.path.splitext(filename)
-        rsp = maya.cmds.file(path, reference=True, namespace=namespace)
-    log_debug("%s = file('%s', reference=True, namespace=%s)" % (rsp, path, namespace))
+    try:
+        args = msg['data']
+        path = maya.cmds.encodeString(args['ARTELLA_FILE'])
+        use_rename = maya.cmds.optionVar(q='referenceOptionsUseRenamePrefix')
+        rsp = None
+        if use_rename:
+            namespace = maya.cmds.optionVar(q='referenceOptionsRenamePrefix')
+            rsp = maya.cmds.file(path, reference=True, namespace=namespace)
+        else:
+            filename = os.path.basename(path)
+            namespace, _ = os.path.splitext(filename)
+            rsp = maya.cmds.file(path, reference=True, namespace=namespace)
+        log_debug("%s = file('%s', reference=True, namespace=%s)" %
+                  (rsp, path, namespace))
+    except Exception as e:
+        log_debug("EXCEPTION! _realtime_reference: %s" % e)
 
 
 # -----------------------------------------------------------------------------
@@ -449,7 +457,7 @@ def convert_file_paths(maya_obj=None):
                   "looking for dependent files: %s" % e)
         return
     if not dirs:
-        log_debug("file dirs not found")
+        log_debug("did not find any dependent file directories")
         return
     for dir_name in dirs:
         try:
@@ -1125,20 +1133,26 @@ class ArtellaAppClient():
         return line
 
     def ws_listen(self):
-        self.ws_connect()
-        if not self._socket_buffer:
-            log_error("socket not connected")
-            return
-        threading.Thread(
-            target=self._pull_messages,
-        ).start()
+        try:
+            self.ws_connect()
+            if not self._socket_buffer:
+                log_error("socket not connected")
+                return
+            threading.Thread(
+                target=self._pull_messages,
+            ).start()
+        except Exception as e:
+            log_debug("EXCEPTION! ws_listen: %s" % e)
 
     def _pull_messages(self):
         log_info("listening for commands on websocket")
         while True:
-            msg = self._get_message()
-            log_debug("_pull_messages: %s" % msg)
-            pass_msg_to_maya(msg)
+            try:
+                msg = self._get_message()
+                log_debug("_pull_messages: %s" % msg)
+                pass_msg_to_maya(msg)
+            except Exception as e:
+                log_debug("EXCEPTION! _pull_messages: %s" % e)
 
     def _get_message(self):
         opcode = ord(self._socket_buffer.get_char())
