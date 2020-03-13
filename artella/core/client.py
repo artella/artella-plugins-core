@@ -96,6 +96,53 @@ class ArtellaDriveClient(object):
         return self._auth_header
 
     # ==============================================================================================================
+    # PATHS
+    # ==============================================================================================================
+
+    def get_local_root(self):
+        """
+        Returns the local storage root path for this machine by asking to remote server
+        :return: Absolute path where files are stored locally
+        :rtype: str
+        :example:
+        >>> self.get_local_root()
+        "C:\Users\artella\artella-files"
+        """
+
+        req = urllib2.Request('http://{}:{}/v2/localserve/kv/settings/workspace'.format(self._host, self._port))
+        local_root = self._communicate(req)
+        if not local_root or (isinstance(local_root, dict) and 'error' in local_root):
+            alr = os.environ.get(consts.ALR, None)
+            if alr:
+                logging.warning('Unable to get local storage root. Using env var instead: "{}"'.format(consts.ALR))
+                local_root = alr
+            else:
+                logging.error('Unable to get local storage root.')
+                logging.info(
+                    'Check that the local Artella Drive service is running and you have a working internet connection.')
+                logging.info(
+                    'To work offline set the "{}" environment variable to the proper local project directory'.format(
+                        consts.ALR))
+
+        return local_root
+
+    # ==============================================================================================================
+    # SESSION
+    # ==============================================================================================================
+
+    def get_storage_id(self):
+        """
+        Returns storage ID of the machine this client is running on
+        :return: ID indicating this desktop instance
+        :rtype:
+        """
+
+        req = urllib2.Request('http://{}:{}/v2/localserve/kv/settings/machine-id'.format(self._host, self._port))
+        storage_id = self._communicate(req)
+
+        return storage_id
+
+    # ==============================================================================================================
     # TEST
     # ==============================================================================================================
 
