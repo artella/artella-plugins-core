@@ -78,7 +78,7 @@ class ArtellaDriveClient(object):
 
         if not ArtellaDriveClient._challenge_path:
             rsp = self.get_challenge_file_path()
-            if 'error' in rsp:
+            if not rsp or 'error' in rsp:
                 logging.error('Unable to get challenge file path "{}"'.format(rsp))
                 self._auth_header = None
                 return self._auth_header
@@ -158,17 +158,24 @@ class ArtellaDriveClient(object):
             return {'error': msg, 'url': req.get_full_url()}
         else:
             raw_data = rsp.read()
-            try:
-                json_data = json.loads(raw_data)
-            except Exception as exc:
-                logging.debug('Artella data response: "{}"'.format(raw_data))
-                logging.error(exc)
-                return raw_data
+            if not raw_data:
+                return {'error': 'No Artella data response.', 'url': req.get_full_url()}
             else:
-                logging.debug('ArtellaDrive JSON response: "{}"'.format(json_data))
-                return json_data
-
+                try:
+                    json_data = json.loads(raw_data)
+                except ValueError:
+                    logging.debug('ArtellaDrive data response: "{}"'.format(raw_data))
+                    return raw_data
+                except Exception as exc:
+                    logging.error(exc)
+                    return raw_data
+                else:
+                    logging.debug('ArtellaDriver JSON response: "{}"'.format(json_data))
+                    return json_data
 
 if __name__ == '__main__':
     artella_cli = ArtellaDriveClient.get()
     print(artella_cli.ping())
+    print(artella_cli.get_challenge_file_path())
+    print(artella_cli.get_local_root())
+    print(artella_cli.get_storage_id())
