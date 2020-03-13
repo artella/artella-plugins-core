@@ -10,7 +10,14 @@ from __future__ import print_function, division, absolute_import
 import os
 import json
 import logging
-import urllib2
+try:
+    from urllib.parse import urlparse, urlencode
+    from urllib.request import urlopen, Request
+    from urllib.error import HTTPError, URLError
+except ImportError:
+    from urlparse import urlparse
+    from urllib import urlencode
+    from urllib2 import urlopen, Request, HTTPError, URLError
 
 from artella.core import consts
 
@@ -63,7 +70,7 @@ class ArtellaDriveClient(object):
         }
         """
 
-        req = urllib2.Request('http://{}:{}/v2/localserve/auth/challenge-file-path'.format(self._host, self._port))
+        req = Request('http://{}:{}/v2/localserve/auth/challenge-file-path'.format(self._host, self._port))
         rsp = self._communicate(req, skip_auth=True)
 
         return rsp
@@ -109,7 +116,7 @@ class ArtellaDriveClient(object):
         "C:\Users\artella\artella-files"
         """
 
-        req = urllib2.Request('http://{}:{}/v2/localserve/kv/settings/workspace'.format(self._host, self._port))
+        req = Request('http://{}:{}/v2/localserve/kv/settings/workspace'.format(self._host, self._port))
         local_root = self._communicate(req)
         if not local_root or (isinstance(local_root, dict) and 'error' in local_root):
             alr = os.environ.get(consts.ALR, None)
@@ -134,13 +141,36 @@ class ArtellaDriveClient(object):
         """
         Returns storage ID of the machine this client is running on
         :return: ID indicating this desktop instance
-        :rtype:
+        :rtype: str
+        :example:
+        >>> self.get_storage_id()
+        "d7apalzl2rdnphe5wuccytqq3i"
         """
 
-        req = urllib2.Request('http://{}:{}/v2/localserve/kv/settings/machine-id'.format(self._host, self._port))
+        req = Request('http://{}:{}/v2/localserve/kv/settings/machine-id'.format(self._host, self._port))
         storage_id = self._communicate(req)
 
         return storage_id
+
+    def get_metadata(self):
+        """
+        Returns general data related with current session by asking remote server
+        :return: Returns a dictionary containing all keys and values in kv namespace
+        :rtype: dict
+        :example:
+        >>> self.get_metadata()
+        {
+            "machine-id": "d7apalzl2rdnphe5wuccytqq3i",
+            "workspace": "C:\Users\artella\artella-files",
+            "openers.log": "C:\\Users\\artella\\AppData\\Roaming\\artella\\openers.log"
+        }
+        """
+
+        params = urlencode({'dump': 'true'})
+        req = Request('http://{}:{}/v2/localserve/kv/settings?{}'.format(self._host, self._port, params))
+        rsp = self._communicate(req)
+
+        return rsp
 
     # ==============================================================================================================
     # TEST
@@ -160,7 +190,7 @@ class ArtellaDriveClient(object):
         }
         """
 
-        req = urllib2.Request('http://{}:{}/v2/localserve/ping'.format(self._host, self._port))
+        req = Request('http://{}:{}/v2/localserve/ping'.format(self._host, self._port))
         rsp = self._communicate(req, skip_auth=True)
 
         return rsp
@@ -192,8 +222,8 @@ class ArtellaDriveClient(object):
 
         req.add_header('Authorization', self._auth_header)
         try:
-            rsp = urllib2.urlopen(req, data)
-        except urllib2.URLError as exc:
+            rsp = urlopen(req, data)
+        except URLError as exc:
             if hasattr(exc, 'reason'):
                 msg = 'Failed to reach the local ArtellaDrive: "{}"'.format(exc.reason)
             elif hasattr(exc, 'code'):
@@ -220,9 +250,11 @@ class ArtellaDriveClient(object):
                     logging.debug('ArtellaDriver JSON response: "{}"'.format(json_data))
                     return json_data
 
+
 if __name__ == '__main__':
     artella_cli = ArtellaDriveClient.get()
     print(artella_cli.ping())
     print(artella_cli.get_challenge_file_path())
     print(artella_cli.get_local_root())
     print(artella_cli.get_storage_id())
+    print(artella_cli.get_metadata())
