@@ -17,3 +17,6 @@ DEFAULT_HOST = '127.0.0.1'
 
 # Defines default port used by the client
 DEFAULT_PORT = 29282
+
+# Defines authentication header
+AUTH_HEADER = 'artella-file-challenge artella-challenge {}'

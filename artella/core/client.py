@@ -7,6 +7,7 @@ Module that contains ArtellaApp Python client implementation
 
 from __future__ import print_function, division, absolute_import
 
+import os
 import json
 import logging
 import urllib2
@@ -44,7 +45,7 @@ class ArtellaDriveClient(object):
         artella_client.update_auth_challenge()
 
         return artella_client
-    
+
     # ==============================================================================================================
     # CHALLENGE FILE
     # ==============================================================================================================
@@ -75,10 +76,24 @@ class ArtellaDriveClient(object):
         :return:
         """
 
-        if not self._challenge_path:
-            pass
+        if not ArtellaDriveClient._challenge_path:
+            rsp = self.get_challenge_file_path()
+            if 'error' in rsp:
+                logging.error('Unable to get challenge file path "{}"'.format(rsp))
+                self._auth_header = None
+                return self._auth_header
+            ArtellaDriveClient._challenge_path = rsp.get('challenge_file_path')
 
-        return False
+        if not os.path.exists(ArtellaDriveClient._challenge_path):
+            logging.error('Challenge file not found: "{}"'.format(ArtellaDriveClient._challenge_path))
+            self._auth_header = None
+            return self._auth_header
+
+        with open(os.path.expanduser(ArtellaDriveClient._challenge_path)) as fp:
+            base_auth_header = fp.read()
+        self._auth_header = consts.AUTH_HEADER.format(base_auth_header[:64].encode('hex'))
+
+        return self._auth_header
 
     # ==============================================================================================================
     # TEST
@@ -114,7 +129,7 @@ class ArtellaDriveClient(object):
         :param data: str, additional encoded data to send to the server
         :param skip_auth: bool, Whether authorization check should be skip or not
         :return: dict, dictionary containing the answer from the server.
-            If the call is not valid a dictionary containing the url and error message is returned.
+            If the call is not valid, a dictionary containing the url and error message is returned.
         """
 
         logging.debug('Making request to Artella Drive "{}"'.format(req.get_full_url()))
@@ -151,6 +166,7 @@ class ArtellaDriveClient(object):
                 return raw_data
             else:
                 logging.debug('ArtellaDrive JSON response: "{}"'.format(json_data))
+                return json_data
 
 
 if __name__ == '__main__':
