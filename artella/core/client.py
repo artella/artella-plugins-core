@@ -111,6 +111,7 @@ class ArtellaDriveClient(object):
     def get_storage_id(self):
         """
         Returns storage ID of the machine this client is running on
+
         :return: ID indicating this desktop instance
         :rtype: str
         :example:
@@ -126,6 +127,7 @@ class ArtellaDriveClient(object):
     def get_metadata(self):
         """
         Returns general data related with current session by asking remote server
+
         :return: Returns a dictionary containing all keys and values in kv namespace
         :rtype: dict
         :example:
@@ -183,6 +185,7 @@ class ArtellaDriveClient(object):
     def resolve(self, path):
         """
         Converts a local path to a remote handle path representation and vice versa
+
         :param str path: local path or remote server path
         :return: Returns a dictionary containing resolved path or error message is the path cannot be resolve
         :rtype: dict
@@ -231,6 +234,7 @@ class ArtellaDriveClient(object):
     def status(self, path):
         """
         Returns the status of a file from the remote server
+
         :param str path: Local path or Resolved URI path of a folder/file or list of folders/files
         :return:
         :rtype: dict
@@ -277,6 +281,7 @@ class ArtellaDriveClient(object):
     def download(self, paths, version=None, recursive=False, overwrite=True, folders_only=False):
         """
         Downloads files from remote server
+
         :param list(str) paths: List of file/folder paths (full or URI paths) to download from remote server
         :param int version: If given, specified version of the file/folder will be downloaded
         :param bool recursive: If True and we download a folder, all folder contents will be downloaded also
@@ -321,6 +326,7 @@ class ArtellaDriveClient(object):
     def upload(self, paths, folders_only=False, comment=''):
         """
         Uploads a new file/folder or a new version of an existing file/folder to the remote server
+
         :param list(str) paths: List of file/folder paths (full or URI paths) to upload to the remote server
         :param bool folders_only: If True, only folder structure will be uploaded
         :param str comment: Comment that will be linked to the uploaded files/folders
@@ -359,6 +365,7 @@ class ArtellaDriveClient(object):
     def lock_file(self, file_path, note=consts.DEFAULT_LOCK_NOTE):
         """
         Lock given file path in the web platform so that other users know it is in use
+
         :param str file_path: Absolute local file path to lock
         :param str or None note: Optional note to add to the lock operation
         :return: Returns True if the lock file was successfully locked or if the if the file was already locked
@@ -385,6 +392,7 @@ class ArtellaDriveClient(object):
     def unlock_file(self, file_path):
         """
         Unlocks given file paths in the web platform so that other users can use it
+
         :param str file_path: Absolute local file path to unlock
         :return: Returns True if the file was successfully unlocked; False otherwise
         :rtype: bool
@@ -409,6 +417,7 @@ class ArtellaDriveClient(object):
     def ping(self):
         """
         Test call that returns whether the Artella Drive is valid or not
+
         :return: Returns a success response or auth failure message
         :rtype: dict
         :example:
@@ -432,6 +441,7 @@ class ArtellaDriveClient(object):
     def _communicate(self, req, data=None, skip_auth=False):
         """
         Internal function that sends a request to ArtellaDriver server
+
         :param Request req: URL request object
         :param str data: additional encoded data to send to the server
         :param bool skip_auth: whether authorization check should be skip or not
@@ -484,8 +494,10 @@ class ArtellaDriveClient(object):
         """
         Internal function that extracts batch_id and transfer_data from response so that we can continue the
         tracking process
-        :param rsp:
-        :return:
+
+        :param dict rsp: Dictionary returned by a call to remote server
+        :return: String containing ID of the operation
+        :rtype: str
         """
 
         batch_id = rsp.get('batch_id')
@@ -497,7 +509,8 @@ class ArtellaDriveClient(object):
 def is_uri_path(file_path):
     """
     Returns whether or not given file path is using Artella URI schema or not
-    :param str file_path:
+
+    :param str file_path: File path to check.
     :return: True if given path is using Artella URI schema; False otherwise.
     :rtype: bool
     """
@@ -513,9 +526,11 @@ def is_uri_path(file_path):
 def path_to_uri(path):
     """
     Converts a path to a path that uses Artella API scheme
-    :param str path:
-    :return:
-    :rtype: list
+
+    :param str path: File to convert to Artella URI scheme format
+    :return: Returns a path converted into Artella URI scheme format. If the conversion cannot be done, the path
+        without any change will be returned.
+    :rtype: str
     """
 
     path_uri = paths_to_uri(path)
@@ -525,10 +540,12 @@ def path_to_uri(path):
 
 def paths_to_uri(paths):
     """
-    Converts a list of paths to paths that uses Artella URI scheme
-    :param str or list(str) paths:
-    :return:
-    :rtype: list
+    Converts a list of paths to paths that use Artella URI scheme
+
+    :param str or list(str) paths: List of paths to convert to Artella URI scheme
+    :return: List of paths converted into Artella URI scheme. If a path cannot be converted, it will be returned
+        without any changes.
+    :rtype: list(str)
     """
 
     paths = utils.force_list(paths)
@@ -557,9 +574,11 @@ def paths_to_uri(paths):
 
 def path_to_handle(path):
     """
-    Converts a path to Artella handle path
-    :param path: str
-    :return:
+    Converts a path to an Artella handle path
+
+    :param path: str, Path to convert to handle path, it can be an URI path or an absolute local file path
+    :return: Returns an Artella handle path
+    :rtype: str
     """
 
     handles = paths_to_handles(path, as_dict=False)
@@ -570,9 +589,10 @@ def path_to_handle(path):
 def paths_to_handles(paths, as_dict=False):
     """
     Converts a list of paths (full paths or URI paths) to Artella handle paths
+
     :param str or list(str) paths:
     :param bool as_dict: If True, a dictionary mapping file paths with their handle will be returned.
-    :return:
+    :return: List of handles associated to given file paths
     :rtype: list(str) or dict(str, str)
     """
 
