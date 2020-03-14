@@ -513,6 +513,11 @@ def is_uri_path(file_path):
     :param str file_path: File path to check.
     :return: True if given path is using Artella URI schema; False otherwise.
     :rtype: bool
+    :example:
+    >>> is_uri_path("artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png")
+    True
+    >>> is_uri_path("C:/Users/artella/artella-files/project/refs/ref.png")
+    False
     """
 
     if not file_path:
@@ -531,6 +536,13 @@ def path_to_uri(path):
     :return: Returns a path converted into Artella URI scheme format. If the conversion cannot be done, the path
         without any change will be returned.
     :rtype: str
+    :example:
+    >>> path_to_uri("artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png")
+    "artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png"
+    >>> path_to_uri("C:/Users/artella/artella-files/project/refs/ref.png")
+    "artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png"
+    >>> path_to_uri("Invalid/Path")
+    "Invalid/Path"
     """
 
     path_uri = paths_to_uri(path)
@@ -579,6 +591,11 @@ def path_to_handle(path):
     :param path: str, Path to convert to handle path, it can be an URI path or an absolute local file path
     :return: Returns an Artella handle path
     :rtype: str
+    :example:
+    >>> path_to_handle("artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png")
+    "file__12345"
+    >>> path_to_handle("C:/Users/artella/artella-files/project/refs/ref.png")
+    "file__12345"
     """
 
     handles = paths_to_handles(path, as_dict=False)
