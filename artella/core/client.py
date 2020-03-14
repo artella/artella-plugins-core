@@ -607,6 +607,3 @@ if __name__ == '__main__':
     print(artella_cli.get_local_root())
     print(artella_cli.get_storage_id())
     print(artella_cli.get_metadata())
-    # print(artella_cli.resolve('artella:project__foppohsucse44wyrmzm6ewnzse/Plug-ins/Area.png'))
-    # os.environ['ARTELLA_FOLDER_ROOT'] = "C:/Users/Tomi/artella-files/Rambutan"
-    # print(path_to_uri("$ARTELLA_FOLDER_ROOT/Plug-ins/Area.png"))
