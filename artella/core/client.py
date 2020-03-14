@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module that contains ArtellaApp Python client implementation
+Module that contains ArtellaDrive Python client implementation
 """
 
 from __future__ import print_function, division, absolute_import
@@ -19,7 +19,7 @@ except ImportError:
     from urllib import urlencode
     from urllib2 import urlopen, Request, HTTPError, URLError
 
-from artella.core import consts
+from artella.core import consts, utils
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,6 +35,7 @@ class ArtellaDriveClient(object):
         self._host = host
         self._port = port
         self._auth_header = None
+        self._batch_ids = set()
 
     @classmethod
     def get(cls):
@@ -102,6 +103,45 @@ class ArtellaDriveClient(object):
         self._auth_header = consts.AUTH_HEADER.format(base_auth_header[:64].encode('hex'))
 
         return self._auth_header
+
+    # ==============================================================================================================
+    # SESSION
+    # ==============================================================================================================
+
+    def get_storage_id(self):
+        """
+        Returns storage ID of the machine this client is running on
+        :return: ID indicating this desktop instance
+        :rtype: str
+        :example:
+        >>> self.get_storage_id()
+        "d7apalzl2rdnphe5wuccytqq3i"
+        """
+
+        req = Request('http://{}:{}/v2/localserve/kv/settings/machine-id'.format(self._host, self._port))
+        storage_id = self._communicate(req)
+
+        return storage_id
+
+    def get_metadata(self):
+        """
+        Returns general data related with current session by asking remote server
+        :return: Returns a dictionary containing all keys and values in kv namespace
+        :rtype: dict
+        :example:
+        >>> self.get_metadata()
+        {
+            "machine-id": "d7apalzl2rdnphe5wuccytqq3i",
+            "workspace": "C:\Users\artella\artella-files",
+            "openers.log": "C:\\Users\\artella\\AppData\\Roaming\\artella\\openers.log"
+        }
+        """
+
+        params = urlencode({'dump': 'true'})
+        req = Request('http://{}:{}/v2/localserve/kv/settings?{}'.format(self._host, self._port, params))
+        rsp = self._communicate(req)
+
+        return rsp
 
     # ==============================================================================================================
     # PATHS
@@ -185,43 +225,134 @@ class ArtellaDriveClient(object):
         return rsp
 
     # ==============================================================================================================
-    # SESSION
+    # FILES
     # ==============================================================================================================
 
-    def get_storage_id(self):
+    def status(self, path):
         """
-        Returns storage ID of the machine this client is running on
-        :return: ID indicating this desktop instance
-        :rtype: str
-        :example:
-        >>> self.get_storage_id()
-        "d7apalzl2rdnphe5wuccytqq3i"
-        """
-
-        req = Request('http://{}:{}/v2/localserve/kv/settings/machine-id'.format(self._host, self._port))
-        storage_id = self._communicate(req)
-
-        return storage_id
-
-    def get_metadata(self):
-        """
-        Returns general data related with current session by asking remote server
-        :return: Returns a dictionary containing all keys and values in kv namespace
+        Returns the status of a file from the remote server
+        :param str path: Local path or Resolved URI path of a folder/file or list of folders/files
+        :return:
         :rtype: dict
         :example:
-        >>> self.get_metadata()
+        >>> self.status('artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png')
+        >>> self.status('C:/Users/artella/artella-files/projects/refs/ref.png')
         {
-            "machine-id": "d7apalzl2rdnphe5wuccytqq3i",
-            "workspace": "C:\Users\artella\artella-files",
-            "openers.log": "C:\\Users\\artella\\AppData\\Roaming\\artella\\openers.log"
+            'project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png':
+            {
+                'local_info':
+                {
+                    'content_length': 390223,
+                    'remote_version': 1,
+                    'name': u'Area.png',
+                    'modified_time': '2020-03-11T23:38:01.3985577+01:00',
+                    'mode': u'0666',
+                    'signature':
+                    'sha1:f67817bdfa6a828ab3a80110d2e52ca8a430afb7',
+                    'path': u'C:\\Users\\artella\\artella-files\\project\\refs\\ref.png'
+                }
+            }
         }
         """
 
-        params = urlencode({'dump': 'true'})
-        req = Request('http://{}:{}/v2/localserve/kv/settings?{}'.format(self._host, self._port, params))
+        if not is_uri_path(path):
+            path = path_to_uri(path)
+
+        uri_parts = urlparse(path)
+        params = urlencode({'handle': uri_parts.path})
+        req = Request('http://{}:{}/v2/localserve/fileinfo?{}'.format(self._host, self._port, params))
         rsp = self._communicate(req)
+        if 'error' in rsp:
+            logging.error('Attempting to retrieve status "{}" "{}"'.format(path, rsp.get('error')))
+            return rsp
+
+        # TODO: [dave]: once we have a reliable way to resolve the record handle
+        # back into the abs path, iterate and match on the file name
+        for k, v in rsp.items():
+            if os.path.basename(k) == os.path.basename(path):
+                return v.get('remote_info', dict())
 
         return rsp
+
+    def download(self, paths, version=None, recursive=False, overwrite=True, folders_only=False):
+        """
+        Downloads files from remote server
+        :param list(str) paths: List of file/folder paths (full or URI paths) to download from remote server
+        :param int version: If given, specified version of the file/folder will be downloaded
+        :param bool recursive: If True and we download a folder, all folder contents will be downloaded also
+        :param bool overwrite: If True, already downloaded files will be overwritten with the contents in remote server
+        :param bool folders_only: If True, only folder structure will be downloaded
+        :return: Dictionary containing batch ID of the operation
+        :rtype: dict
+        :example:
+        >>> self.download('artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png')
+        >>> self.download('C:/Users/artella/artella-files/project/refs/', recursive=True)
+        >>> self.download('C:/Users/artella/artella-files/project/refs/', recursive=True, version=1)
+        >>> self.download('C:/Users/artella/artella-files/project/refs/ref.png')
+        {
+            'batch_id': '1584199877-4'
+        }
+        >>> self.download('Non/Valid/Path')
+        {}
+        """
+
+        handles = paths_to_handles(paths)
+        if not handles:
+            return dict()
+        logging.debug('Handles: "{}"'.format(handles))
+
+        payload = {
+            'handles': handles,
+            'recursive': recursive,
+            'replace_locals': overwrite,
+            'folders_only': folders_only
+        }
+        if version is not None:
+            payload['version'] = int(version)
+        req = Request('http://{}:{}/v2/localserve/transfer/download'.format(self._host, self._port))
+        rsp = self._communicate(req, json.dumps(payload))
+        if 'error' in rsp:
+            logging.warning('Unable to download file paths "{}" "{}"'.format(handles, rsp.get('error')))
+            return rsp
+
+        return self._track_response(rsp)
+
+    def upload(self, paths, folders_only=False, comment=''):
+        """
+        Uploads a new file/folder or a new version of an existing file/folder to the remote server
+        :param list(str) paths: List of file/folder paths (full or URI paths) to upload to the remote server
+        :param bool folders_only: If True, only folder structure will be uploaded
+        :param str comment: Comment that will be linked to the uploaded files/folders
+        :return:
+        :rtype: dict
+        >>> self.upload('artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png')
+        >>> self.upload('C:/Users/artella/artella-files/project/refs/', folders_only=True, comment='new folder')
+        >>> self.upload('C:/Users/artella/artella-files/project/refs/ref.png', comment='new file version')
+        {
+            'batch_id': '1584199877-4'
+        }
+        >>> self.upload('Non/Valid/Path')
+        {}
+        """
+
+        handles = paths_to_handles(paths)
+        if not handles:
+            return dict()
+        logging.debug('Handles: "{}"'.format(handles))
+
+        payload = {
+            'handles': handles,
+            'recursive': False,
+            'commit_message': comment or '',
+            'folders_only': folders_only
+        }
+        req = Request('http://{}:{}/v2/localserve/transfer/upload'.format(self._host, self._port))
+        rsp = self._communicate(req, json.dumps(payload))
+        if 'error' in rsp:
+            logging.warning('Unable to upload file paths "{}" "{}"'.format(handles, rsp.get('error')))
+            return rsp
+
+        return self._track_response(rsp)
 
     # ==============================================================================================================
     # TEST
@@ -301,6 +432,19 @@ class ArtellaDriveClient(object):
                     logging.debug('ArtellaDriver JSON response: "{}"'.format(json_data))
                     return json_data
 
+    def _track_response(self, rsp):
+        """
+        Internal function that extracts batch_id and transfer_data from response so that we can continue the
+        tracking process
+        :param rsp:
+        :return:
+        """
+
+        batch_id = rsp.get('batch_id')
+        self._batch_ids.add(batch_id)
+
+        return rsp
+
 
 def is_uri_path(file_path):
     """
@@ -318,26 +462,76 @@ def is_uri_path(file_path):
     return uri.scheme == consts.ARTELLA_URI_SCHEME
 
 
-def path_to_uri(file_path):
+def path_to_uri(path):
     """
-    Converts a path to a path that uses Artella URI scheme
-    :param file_path:
+    Converts a path to a path that uses Artella API scheme
+    :param str path:
     :return:
+    :rtype: list
     """
 
-    full_path = os.path.abspath(os.path.expandvars(os.path.expanduser(file_path)))
-    rsp = ArtellaDriveClient.get().resolve(full_path)
-    if 'error' in rsp:
-        logging.warning('Unable to translate path "{}" "{}"'.format(file_path, rsp.get('error')))
-        return file_path
+    path_uri = paths_to_uri(path)
 
-    url_parts = (consts.ARTELLA_URI_SCHEME, '', rsp.get('handle'), '', '', '')
-    fixed_path = urlunparse(url_parts)
-    if not is_uri_path(fixed_path):
-        logging.error('Failed to translate "{}" to URI: "{}"'.format(file_path, fixed_path))
-        return file_path
+    return path_uri[0]
 
-    return fixed_path
+
+def paths_to_uri(paths):
+    """
+    Converts a list of paths to paths that uses Artella URI scheme
+    :param str or list(str) paths:
+    :return:
+    :rtype: list
+    """
+
+    paths = utils.force_list(paths)
+
+    fixed_paths = list()
+
+    for pth in paths:
+        full_path = os.path.abspath(os.path.expandvars(os.path.expanduser(pth)))
+        rsp = ArtellaDriveClient.get().resolve(full_path)
+        if 'error' in rsp:
+            logging.warning('Unable to translate path "{}" "{}"'.format(pth, rsp.get('error')))
+            fixed_paths.append(pth)
+            continue
+
+        url_parts = (consts.ARTELLA_URI_SCHEME, '', rsp.get('handle'), '', '', '')
+        fixed_path = urlunparse(url_parts)
+        if not is_uri_path(fixed_path):
+            logging.error('Failed to translate "{}" to URI: "{}"'.format(pth, fixed_path))
+            fixed_paths.append(pth)
+            continue
+
+        fixed_paths.append(fixed_path)
+
+    return fixed_paths
+
+
+def paths_to_handles(paths):
+    """
+    Converts a list of paths (full paths or URI paths) to Artella handle paths
+    :param str or list(str) paths:
+    :return:
+    :rtype: list
+    """
+
+    paths = utils.force_list(paths)
+
+    handles = set()
+
+    for pth in paths:
+        if not is_uri_path(pth):
+            uri_path = path_to_uri(pth)
+            # If converted URI path is the same as the original path means that path is not valid, so we skip it
+            if uri_path == pth:
+                continue
+        else:
+            uri_path = pth
+        uri_parts = urlparse(uri_path)
+        handle = uri_parts.path
+        handles.add(handle)
+
+    return list(handles)
 
 
 if __name__ == '__main__':
