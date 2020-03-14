@@ -225,7 +225,7 @@ class ArtellaDriveClient(object):
         return rsp
 
     # ==============================================================================================================
-    # FILES
+    # FILES/FOLDERS
     # ==============================================================================================================
 
     def status(self, path):
@@ -268,9 +268,9 @@ class ArtellaDriveClient(object):
 
         # TODO: [dave]: once we have a reliable way to resolve the record handle
         # back into the abs path, iterate and match on the file name
-        for k, v in rsp.items():
-            if os.path.basename(k) == os.path.basename(path):
-                return v.get('remote_info', dict())
+        # for k, v in rsp.items():
+        #     if os.path.basename(k) == os.path.basename(path):
+        #         return v.get('remote_info', dict())
 
         return rsp
 
@@ -296,8 +296,9 @@ class ArtellaDriveClient(object):
         {}
         """
 
-        handles = paths_to_handles(paths)
-        if not handles:
+        path_handle_map = paths_to_handles(paths, as_dict=True)
+        handles = path_handle_map.values()
+        if not path_handle_map or not handles:
             return dict()
         logging.debug('Handles: "{}"'.format(handles))
 
@@ -312,7 +313,7 @@ class ArtellaDriveClient(object):
         req = Request('http://{}:{}/v2/localserve/transfer/download'.format(self._host, self._port))
         rsp = self._communicate(req, json.dumps(payload))
         if 'error' in rsp:
-            logging.warning('Unable to download file paths "{}" "{}"'.format(handles, rsp.get('error')))
+            logging.warning('Unable to download file paths "{}" "{}"'.format(path_handle_map.keys(), rsp.get('error')))
             return rsp
 
         return self._track_response(rsp)
@@ -335,8 +336,9 @@ class ArtellaDriveClient(object):
         {}
         """
 
-        handles = paths_to_handles(paths)
-        if not handles:
+        path_handle_map = paths_to_handles(paths, as_dict=True)
+        handles = path_handle_map.values()
+        if not path_handle_map or not handles:
             return dict()
         logging.debug('Handles: "{}"'.format(handles))
 
@@ -349,10 +351,56 @@ class ArtellaDriveClient(object):
         req = Request('http://{}:{}/v2/localserve/transfer/upload'.format(self._host, self._port))
         rsp = self._communicate(req, json.dumps(payload))
         if 'error' in rsp:
-            logging.warning('Unable to upload file paths "{}" "{}"'.format(handles, rsp.get('error')))
+            logging.warning('Unable to upload file paths "{}" "{}"'.format(path_handle_map.keys(), rsp.get('error')))
             return rsp
 
         return self._track_response(rsp)
+
+    def lock_file(self, file_path, note=consts.DEFAULT_LOCK_NOTE):
+        """
+        Lock given file path in the web platform so that other users know it is in use
+        :param str file_path: Absolute local file path to lock
+        :param str or None note: Optional note to add to the lock operation
+        :return: Returns True if the lock file was successfully locked or if the if the file was already locked
+            by the same user; False otherwise
+        :rtype: bool
+        :example:
+        >>> self.lock_file('C:/Users/artella/artella-files/project/refs/ref.png')
+        True
+        """
+
+        payload = {
+            'handle': file_path,
+            'note': note or consts.DEFAULT_LOCK_NOTE
+        }
+        req = Request('http://{}:{}/v2/localserve/lock'.format(self._host, self._port))
+        req.add_header('Content-Type', 'application/json')
+        rsp = self._communicate(req, json.dumps(payload))
+        if 'error' in rsp:
+            logging.error('Unable to lock file path "{}" "{}"'.format(file_path, rsp.get('error')))
+            return False
+
+        return rsp.get('response', False) and rsp.get('status_code', 0) == 200
+
+    def unlock_file(self, file_path):
+        """
+        Unlocks given file paths in the web platform so that other users can use it
+        :param str file_path: Absolute local file path to unlock
+        :return: Returns True if the file was successfully unlocked; False otherwise
+        :rtype: bool
+        """
+
+        payload = {
+            'handle': file_path
+        }
+        req = Request('http://{}:{}/v2/localserve/unlock'.format(self._host, self._port))
+        req.add_header('Content-Type', 'application/json')
+        rsp = self._communicate(req, json.dumps(payload))
+        if 'error' in rsp:
+            logging.error('Unable to unlock file path "{}" "{}"'.format(file_path, rsp.get('error')))
+            return False
+
+        return rsp.get('response', False) and rsp.get('status_code', 0) == 200
 
     # ==============================================================================================================
     # TEST
@@ -507,17 +555,31 @@ def paths_to_uri(paths):
     return fixed_paths
 
 
-def paths_to_handles(paths):
+def path_to_handle(path):
+    """
+    Converts a path to Artella handle path
+    :param path: str
+    :return:
+    """
+
+    handles = paths_to_handles(path, as_dict=False)
+
+    return handles[0] if handles else path
+
+
+def paths_to_handles(paths, as_dict=False):
     """
     Converts a list of paths (full paths or URI paths) to Artella handle paths
     :param str or list(str) paths:
+    :param bool as_dict: If True, a dictionary mapping file paths with their handle will be returned.
     :return:
-    :rtype: list
+    :rtype: list(str) or dict(str, str)
     """
 
     paths = utils.force_list(paths)
 
     handles = set()
+    path_handle_map = dict()
 
     for pth in paths:
         if not is_uri_path(pth):
@@ -530,6 +592,10 @@ def paths_to_handles(paths):
         uri_parts = urlparse(uri_path)
         handle = uri_parts.path
         handles.add(handle)
+        path_handle_map[pth] = handle
+
+    if as_dict:
+        return path_handle_map
 
     return list(handles)
 
