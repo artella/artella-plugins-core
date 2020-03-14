@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Module that contains constants definitions used by ArtellaApp
+Module that contains constants definitions used by Artella Drive
 """
+
+from __future__ import print_function, division, absolute_import
 
 # Defines Local Environment Variable that defines Artella root folder location
 # This is used as fallback when ArtellaApp/URI is not available

@@ -11,11 +11,11 @@ import os
 import json
 import logging
 try:
-    from urllib.parse import urlparse, urlencode
+    from urllib.parse import urlparse, urlencode, urlunparse
     from urllib.request import urlopen, Request
     from urllib.error import HTTPError, URLError
 except ImportError:
-    from urlparse import urlparse
+    from urlparse import urlparse, urlunparse
     from urllib import urlencode
     from urllib2 import urlopen, Request, HTTPError, URLError
 
@@ -80,7 +80,8 @@ class ArtellaDriveClient(object):
         Collects some data from a local file to confirm we are running on the same that
         Artella drive is running.
 
-        :return:
+        :return: string containing authentication header for current session or None if authentication was invalid
+        :rtype: str or None
         """
 
         if not ArtellaDriveClient._challenge_path:
@@ -108,9 +109,15 @@ class ArtellaDriveClient(object):
 
     def get_local_root(self):
         """
-        Returns the local storage root path for this machine by asking to remote server
+        Returns the local storage root path for this machine by asking to remote server.
+        .. note::
+            If local root cannot be retrieved from server (this can happen because server is down or because user
+            doesn't have a working internet connection) then this function will try to retrieve the local root path
+            from ARTELLA_FOLDER_ROOT environment variable. This environment variable must be defined by users manually
+            to point to local root path.
+
         :return: Absolute path where files are stored locally
-        :rtype: str
+        :rtype: str or None
         :example:
         >>> self.get_local_root()
         "C:\Users\artella\artella-files"
@@ -132,6 +139,50 @@ class ArtellaDriveClient(object):
                         consts.ALR))
 
         return local_root
+
+    def resolve(self, path):
+        """
+        Converts a local path to a remote handle path representation and vice versa
+        :param str path: local path or remote server path
+        :return: Returns a dictionary containing resolved path or error message is the path cannot be resolve
+        :rtype: dict
+        :example:
+        >>> os.environ['ARTELLA_FOLDER_ROOT'] = "C:/Users/artella/artella-files/project"
+        >>> self.resolve("$ARTELLA_FOLDER_ROOT/refs/ref.png")
+        {
+            'handle': 'project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png',
+            'file_path': u'C:\\Users\\artella\\artella-files\\project\\refs\\ref.png'
+        }
+        >>> self.resolve("artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png")
+        {
+            'handle': 'project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png',
+            'file_path': u'C:\\Users\\artella\\artella-files\\project\\refs\\ref.png'
+        }
+        >>> self.resolve("C:/Users/artella/artella-files/project/refs/ref.png")
+        {
+            'handle': 'project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png',
+            'file_path': 'C:\\Users\\artella\\artella-files\\project\\refs\\ref.png'
+        }
+        >>> self.resolve("C:/Invalid/Path/ref.png")
+        {
+            'url': 'http://127.0.0.1:29282/v2/localserve/resolve',
+            'error': 'Failed to reach the local ArtellaDrive: "Bad Request"'
+        }
+        """
+
+        # We set request object depending whether given path is an URI one or not
+        if is_uri_path(path):
+            payload = {'handle': path}
+        else:
+            payload = {'file_path': path}
+
+        req = Request('http://{}:{}/v2/localserve/resolve'.format(self._host, self._port))
+        req.add_header('Content-Type', 'application/json')
+        rsp = self._communicate(req, json.dumps(payload))
+        if 'error' in rsp:
+            logging.error('Attempting to resolve "{}" "{}"'.format(path, rsp.get('error')))
+
+        return rsp
 
     # ==============================================================================================================
     # SESSION
@@ -202,9 +253,9 @@ class ArtellaDriveClient(object):
     def _communicate(self, req, data=None, skip_auth=False):
         """
         Internal function that sends a request to ArtellaDriver server
-        :param req: urllib2.Request, URL request object
-        :param data: str, additional encoded data to send to the server
-        :param skip_auth: bool, Whether authorization check should be skip or not
+        :param Request req: URL request object
+        :param str data: additional encoded data to send to the server
+        :param bool skip_auth: whether authorization check should be skip or not
         :return: dict, dictionary containing the answer from the server.
             If the call is not valid, a dictionary containing the url and error message is returned.
         """
@@ -251,6 +302,44 @@ class ArtellaDriveClient(object):
                     return json_data
 
 
+def is_uri_path(file_path):
+    """
+    Returns whether or not given file path is using Artella URI schema or not
+    :param str file_path:
+    :return: True if given path is using Artella URI schema; False otherwise.
+    :rtype: bool
+    """
+
+    if not file_path:
+        return False
+
+    uri = urlparse(file_path)
+
+    return uri.scheme == consts.ARTELLA_URI_SCHEME
+
+
+def path_to_uri(file_path):
+    """
+    Converts a path to a path that uses Artella URI scheme
+    :param file_path:
+    :return:
+    """
+
+    full_path = os.path.abspath(os.path.expandvars(os.path.expanduser(file_path)))
+    rsp = ArtellaDriveClient.get().resolve(full_path)
+    if 'error' in rsp:
+        logging.warning('Unable to translate path "{}" "{}"'.format(file_path, rsp.get('error')))
+        return file_path
+
+    url_parts = (consts.ARTELLA_URI_SCHEME, '', rsp.get('handle'), '', '', '')
+    fixed_path = urlunparse(url_parts)
+    if not is_uri_path(fixed_path):
+        logging.error('Failed to translate "{}" to URI: "{}"'.format(file_path, fixed_path))
+        return file_path
+
+    return fixed_path
+
+
 if __name__ == '__main__':
     artella_cli = ArtellaDriveClient.get()
     print(artella_cli.ping())
@@ -258,3 +347,6 @@ if __name__ == '__main__':
     print(artella_cli.get_local_root())
     print(artella_cli.get_storage_id())
     print(artella_cli.get_metadata())
+    # print(artella_cli.resolve('artella:project__foppohsucse44wyrmzm6ewnzse/Plug-ins/Area.png'))
+    # os.environ['ARTELLA_FOLDER_ROOT'] = "C:/Users/Tomi/artella-files/Rambutan"
+    # print(path_to_uri("$ARTELLA_FOLDER_ROOT/Plug-ins/Area.png"))
