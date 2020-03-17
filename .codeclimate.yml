@@ -1,6 +1,13 @@
 engines:
+  bandit:
+    enabled: true
+  markdownlint:
+    enabled: true
   pep8:
     enabled: true
     checks:
       E501:
         enabled: false
+  shellcheck:
+    enabled: true
+    
