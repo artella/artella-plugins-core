@@ -14,6 +14,7 @@ from functools import wraps
 def force_list(var):
     """
     Returns given variable as a list
+
     :param object var: variable we want to convert into a list
     :return: Adds given variable into a list if the variable is not already a list. If the variable is None, an empty
         list is returned. If the variable is a tuple, the tuple is converted into a list
@@ -35,9 +36,11 @@ def force_list(var):
 def debug_object_string(obj, msg):
     """
     Returns a debug string depending of the type of the object
-    :param obj: Python object
-    :param msg: message to log
-    :return: str, debug string
+
+    :param object obj: Python object
+    :param str msg: message to log
+    :return: debug string
+    :rtype: str
     """
 
     if inspect.ismodule(obj):
