@@ -8,7 +8,6 @@ Module that contains DCC
 from __future__ import print_function, division, absolute_import
 
 import os
-import sys
 import logging
 from functools import wraps
 from importlib import import_module
@@ -83,7 +82,7 @@ def current_dcc():
             import_module(dcc_module_name)
             CURRENT_DCC = dcc_name
             return CURRENT_DCC
-        except Exception as exc:
+        except ImportError as exc:
             continue
 
 
