@@ -8,6 +8,7 @@ Module that contains DCC
 from __future__ import print_function, division, absolute_import
 
 import os
+import sys
 import logging
 from functools import wraps
 from importlib import import_module
@@ -35,11 +36,31 @@ DCC_REROUTE_CACHE = dict()
 LOGGER = logging.getLogger(__name__)
 
 
+def init():
+    """
+    Initializes Artella Plugin
+    """
+
+    import artella.dcc as dcc
+    import artella.core.callback as callback
+
+    # Make sure that DCC is cached during initialization
+    current_dcc()
+
+    # Initialize DCC specific callbacks
+    callback.initialize_callbacks()
+
+
 def _reload():
     """
     Function to be used during development. Can be used to "reload" Artella modules.
     Useful when working inside DCC envs.
     """
+
+    # When reloading, caches are removed, so to make sure that all registered callbacks are removed we
+    # cleanup callbacks before reloading
+    import artella.core.callback as callback
+    callback.uninitialize_callbacks()
 
     to_clean = list()
     for m in os.sys.modules.keys():
@@ -122,3 +143,21 @@ def reroute(fn):
         return DCC_REROUTE_CACHE[dcc_reroute_fn_path](*args, **kwargs)
 
     return wrapper
+
+
+def register_class(cls_name, cls, is_unique=False):
+    """
+    Registers given class in artella module dictionary.
+
+    :param cls_name: str, name of the class we want to register
+    :param cls: class, class we want to register
+    :param is_unique: bool, Whether if the class should be updated if new class is registered with the same name
+    """
+
+    if is_unique:
+        if cls_name in sys.modules[__name__].__dict__:
+            setattr(sys.modules[__name__], cls_name, getattr(sys.modules[__name__], cls_name))
+    else:
+        sys.modules[__name__].__dict__[cls_name] = cls
+
+

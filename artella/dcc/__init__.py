@@ -7,8 +7,27 @@ Module that contains dcc module initialization
 
 from __future__ import print_function, division, absolute_import
 
-import artella
 from artella.dcc.abstract.app import *
+from artella.dcc.abstract.callback import *
+from artella.dcc.abstract.parser import *
+
+
+class DccCallbacks(object):
+    """
+    Class that contains all callbacks that can be supported by DCCs
+    """
+    
+    Shutdown = ('Shutdown', {'type': 'simple'})
+    Tick = ('Tick', {'type': 'simple'})
+    SceneCreated = ('SceneCreated', {'type': 'simple'})
+    ScenePreCreated = ('ScenePreCreated', {'type': 'simple'})
+    ScenePostCreated = ('ScenePostCreated', {'type': 'simple'})
+    SceneNewRequested = ('SceneNewRequested', {'type': 'simple'})
+    SceneNewFinished = ('SceneNewFinished', {'type': 'simple'})
+    SceneSaveRequested = ('SceneSaveRequested', {'type': 'simple'})
+    SceneSaveFinished = ('SceneSaveFinished', {'type': 'simple'})
+    SceneOpenRequested = ('SceneOpenRequested', {'type': 'simple'})
+    SceneOpenFinished = ('SceneOpenFinished', {'type': 'simple'})
 
 
 def is_standalone():
@@ -39,3 +58,19 @@ def is_blender():
     """
 
     return artella.current_dcc() == 'blender'
+
+
+def callbacks():
+    """
+    Returns a list of callbacks based on DCC available callbacks
+    :return: List of available DCC callbacks
+    :rtype: list
+    """
+
+    callbacks_list = list()
+    for k, v in DccCallbacks.__dict__.items():
+        if k.startswith('__') or k.endswith('__'):
+            continue
+        callbacks_list.append(v[0])
+
+    return callbacks_list
