@@ -126,6 +126,7 @@ class CallbackWrapper(object):
     def valid(self):
         """
         Property to query the validity of this callback
+
         :return: True if the callback has a notifier; False otherwise
         """
 
@@ -135,6 +136,7 @@ class CallbackWrapper(object):
     def empty(self):
         """
         Property to query the existence of listeners registered to this callback
+
         :return: True if the callback has listener registered; False otherwise
         """
 
@@ -144,6 +146,7 @@ class CallbackWrapper(object):
     def connected(self):
         """
         Property to query the 'connected' state of the callback.
+
         :return: True if the callback has connected itself with the INotifier implementation.
         """
 
@@ -153,7 +156,8 @@ class CallbackWrapper(object):
     def enabled(self):
         """
         Property to query the 'not empty' and 'connected' state of the callback.
-        @return True if the callback has listeners and is connected the to the INotifier implementation.
+
+        :return: True if the callback has listeners and is connected the to the INotifier implementation.
         """
 
         return False
@@ -162,6 +166,7 @@ class CallbackWrapper(object):
     def registry(self):
         """
         Property to query all registered functions of a callback
+
         :return: list<fn>
         """
 
@@ -172,6 +177,7 @@ class CallbackWrapper(object):
         """
         Property to set the 'enable' state of the callback.  Modifying the enable state either toggles
         the 'connected' state of the callback but maintains the list of listeners.
+
         :param bool value: value The enable state of the callback.
         """
         pass
@@ -179,6 +185,7 @@ class CallbackWrapper(object):
     def resume(self):
         """
         Function that resume the notification connection
+
         :return: True if the callback connection has been resumed properly; False otherwise
         """
 
@@ -194,6 +201,7 @@ class CallbackWrapper(object):
     def register(self, fn):
         """
         Adds a listener to this instance.
+
         :param fn: A valid python function with a variable number of arguments (i.e. *args).
         """
 
@@ -202,6 +210,7 @@ class CallbackWrapper(object):
     def unregister(self, fn):
         """
         Removes a listener from this instance.
+
         :param fn: A valid python function with a variable number of arguments (i.e. *args).
         """
 
@@ -217,6 +226,7 @@ class CallbackWrapper(object):
     def _connect(self, fn):
         """
         Internal callback registration function
+
         :param fn: Python function to register as a listener in the sender
         """
 
@@ -225,6 +235,7 @@ class CallbackWrapper(object):
     def _disconnect(self, token):
         """
         Internal callback unregister function
+
         :param token: valid token returned from a previous _connect call
         :return: None if registration was not done or the unchanged value from token otherwise
         """
@@ -238,6 +249,7 @@ class CallbackWrapper(object):
         """
         Internal function to evaluate if the callback from the notifier is valid.
         Tests the validity of the message with the custom function.
+
         :param args:  Variable list of arguments received from the notifier
         :return: A tuple of indeterminant length and type if callbacks should be passed to listener; (False, None)
             otherwise.
@@ -248,6 +260,7 @@ class CallbackWrapper(object):
     def _push(self, state):
         """
         Internal function to set the enable state while maintaining a history of previous enabled states
+
         :param bool state: the enable state of the callback
         """
 
@@ -258,6 +271,7 @@ class CallbackWrapper(object):
     def _pop(self):
         """
         Internal function to restore the enable state to a previous enabled state
+
         :return: True if the callback is enabled as a result of the registration or False otherwise
         """
 
@@ -298,6 +312,7 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
     def empty(self):
         """
         Property to query the existence of listeners to this callback.
+
         :return: True if the callback has listeners registered; False otherwise.
         """
 
@@ -307,6 +322,7 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
     def connected(self):
         """
         Property to query the 'connected' state of the callback.
+
         :return: True if the callback has connected itself with the INotifier implementation.
         """
 
@@ -316,6 +332,7 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
     def enabled(self):
         """
         Property to query the 'not empty' and 'connected' state of the callback.
+
         :return: True if the callback has listeners and is connected the to the INotifier implementation.
         """
 
@@ -326,6 +343,7 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
         """!
         Property to set the 'enable' state of the callback.  Modifying the enable state either toggles
         the 'connected' state of the callback but maintains the list of listeners.
+
         :param bool value: The enable state of the callback.
         """
 
@@ -488,7 +506,8 @@ class FilterCallbackWrapper(CallbackWrapper, object):
     def register(self, fn):
         """
         Adds a listener to this instance
-        @param fn: a valid Python function with a variable number of arguments (exp. *args)
+
+        :param fn: a valid Python function with a variable number of arguments (exp. *args)
         """
 
         LOGGER.debug(
@@ -504,6 +523,7 @@ class FilterCallbackWrapper(CallbackWrapper, object):
     def unregister(self, fn):
         """
         Removes a listener from this instance
+
         :param fn: a valid Python function with a variable number of arguments (exp. *args)
         """
 
