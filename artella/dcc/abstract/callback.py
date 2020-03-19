@@ -59,13 +59,6 @@ class Callbacks(object):
     Class that contains all supported callback definitions
     """
 
-    class NodeSelectCallback(AbstractCallback, object):
-        """
-        Callback that is emitted when a node is selected in DCC viewport
-        """
-
-        pass
-
     class SceneCreatedCallback(AbstractCallback, object):
         """
         Callback that is emitted when a new DCC scene is created

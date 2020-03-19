@@ -16,18 +16,8 @@ class DccCallbacks(object):
     """
     Class that contains all callbacks that can be supported by DCCs
     """
-    
-    Shutdown = ('Shutdown', {'type': 'simple'})
-    Tick = ('Tick', {'type': 'simple'})
+
     SceneCreated = ('SceneCreated', {'type': 'simple'})
-    ScenePreCreated = ('ScenePreCreated', {'type': 'simple'})
-    ScenePostCreated = ('ScenePostCreated', {'type': 'simple'})
-    SceneNewRequested = ('SceneNewRequested', {'type': 'simple'})
-    SceneNewFinished = ('SceneNewFinished', {'type': 'simple'})
-    SceneSaveRequested = ('SceneSaveRequested', {'type': 'simple'})
-    SceneSaveFinished = ('SceneSaveFinished', {'type': 'simple'})
-    SceneOpenRequested = ('SceneOpenRequested', {'type': 'simple'})
-    SceneOpenFinished = ('SceneOpenFinished', {'type': 'simple'})
 
 
 def is_standalone():
