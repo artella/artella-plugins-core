@@ -59,9 +59,44 @@ class Callbacks(object):
     Class that contains all supported callback definitions
     """
 
+    class BeforeOpenCheckCallback(AbstractCallback, object):
+        """
+        Callback that is called before a file is opened
+        """
+
+        pass
+
+    class AfterOpenCallback(AbstractCallback, object):
+        """
+        Callback that is called before opening a DCC scene
+        """
+
+        pass
+
+    class SceneBeforeSaveCallback(AbstractCallback, object):
+        """
+        Callback that is called before a DCC scene is saved
+        """
+
+        pass
+
     class SceneCreatedCallback(AbstractCallback, object):
         """
-        Callback that is emitted when a new DCC scene is created
+        Callback that is called when a new DCC scene is created
+        """
+
+        pass
+
+    class AfterLoadReferenceCallback(AbstractCallback, object):
+        """
+        Callback that is called after a reference file is loaded
+        """
+
+        pass
+
+    class BeforeCreateReferenceCheckCallback(AbstractCallback, object):
+        """
+        Callback that is called before a new reference is created
         """
 
         pass
