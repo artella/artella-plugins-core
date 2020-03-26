@@ -160,5 +160,3 @@ def register_class(cls_name, cls, is_unique=False):
             setattr(sys.modules[__name__], cls_name, getattr(sys.modules[__name__], cls_name))
     else:
         sys.modules[__name__].__dict__[cls_name] = cls
-
-
