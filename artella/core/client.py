@@ -34,7 +34,7 @@ class ArtellaDriveClient(object):
     def __init__(self, host=consts.DEFAULT_HOST, port=consts.DEFAULT_PORT):
         self._host = host
         self._port = port
-        self._auth_header = None
+        self._auth_header = ''
         self._batch_ids = set()
 
     @classmethod
@@ -100,7 +100,7 @@ class ArtellaDriveClient(object):
 
         with open(os.path.expanduser(ArtellaDriveClient._challenge_path)) as fp:
             base_auth_header = fp.read()
-        self._auth_header = consts.AUTH_HEADER.format(base_auth_header[:64].encode('hex'))
+        self._auth_header = consts.AUTH_HEADER.format(codecs.encode(base_auth_header[:64], 'hex').decode('ascii'))
 
         return self._auth_header
 
@@ -134,8 +134,8 @@ class ArtellaDriveClient(object):
         >>> self.get_metadata()
         {
             "machine-id": "d7apalzl2rdnphe5wuccytqq3i",
-            "workspace": "C:\Users\artella\artella-files",
-            "openers.log": "C:\\Users\\artella\\AppData\\Roaming\\artella\\openers.log"
+            "workspace": "C:/Users/artella/artella-files",
+            "openers.log": "C:/Users/artella/AppData/Roaming/artella/openers.log"
         }
         """
 
@@ -162,7 +162,7 @@ class ArtellaDriveClient(object):
         :rtype: str or None
         :example:
         >>> self.get_local_root()
-        "C:\Users\artella\artella-files"
+        "C:/Users/artella/artella-files"
         """
 
         req = Request('http://{}:{}/v2/localserve/kv/settings/workspace'.format(self._host, self._port))
@@ -479,7 +479,8 @@ class ArtellaDriveClient(object):
                 return {'error': 'No Artella data response.', 'url': req.get_full_url()}
             else:
                 try:
-                    json_data = json.loads(raw_data)
+                    raw_data = "".join(chr(x) for x in bytearray(raw_data))
+                    json_data = json.loads(str(raw_data))
                 except ValueError:
                     logging.debug('ArtellaDrive data response: "{}"'.format(raw_data))
                     return raw_data
