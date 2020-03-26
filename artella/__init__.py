@@ -13,16 +13,17 @@ import logging
 from functools import wraps
 from importlib import import_module
 
+import artella.core
+import artella.core.consts as consts
 
 # Directory where DCCs implementations are located. New implementations MUST be located in this folder
-DCCS_DIR = os.path.join(os.path.dirname(__file__), 'dcc')
+DCCS_DIRS = list(set([os.path.join(os.path.dirname(__file__), 'dcc')] + [
+    dcc_dir for dcc_dir in os.environ.get(consts.AED, '').split(';') if os.path.isdir(dcc_dir)]))
 
 # Cached list of available dccs. This listed is cached in import time because we assume that no new DCCs
 # implementations will be added in runtime
-DCCS = os.listdir(DCCS_DIR)
-
-# Defines package namespace where Artella DCC plugins are located
-ARTELLA_DCC_NAMESPACE = 'artella.dcc'
+DCCS = [dcc_folder for dcc_dir in DCCS_DIRS for dcc_folder in os.listdir(dcc_dir)
+        if not dcc_folder.startswith('__') and not dcc_folder.endswith('__') and dcc_folder != 'abstract']
 
 # Cached active DCC. We use it to avoid repetitive checks. We assume that a DCC environment will not change
 # during a session.
