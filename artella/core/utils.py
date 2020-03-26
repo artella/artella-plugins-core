@@ -64,3 +64,31 @@ def abstract(fn):
         raise NotImplementedError(debug_object_string(fn, msg))
 
     return wrapper
+
+
+class Singleton(object):
+    """
+    Class that implements Singleton  pattern design as a class decorator in Python
+    """
+
+    all_instances = list()
+
+    @staticmethod
+    def destroy_all():
+        for instance in Singleton.all_instances:
+            instance.destroy()
+
+    def __init__(self, cls):
+        self.cls = cls
+        self.instance = None
+        self.all_instances.append(self)
+
+    def destroy(self):
+        del self.instance
+        self.instance = None
+
+    def __call__(self, *args, **kwargs):
+        if self.instance is None:
+            self.instance = self.cls(*args, **kwargs)
+
+        return self.instance
