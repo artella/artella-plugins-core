@@ -39,7 +39,7 @@ class Callbacks(object):
 
     class AfterOpenCallback(callback.AbstractCallback, object):
         """
-        Callback that is emitted before opening a DCC scene
+        Callback that is called before opening a DCC scene
         """
 
         @classmethod
@@ -57,7 +57,7 @@ class Callbacks(object):
 
     class SceneBeforeSaveCallback(callback.AbstractCallback, object):
         """
-        Callback that is emitted before a DCC scene is saved
+        Callback that is called before a DCC scene is saved
         """
 
         @classmethod
@@ -75,7 +75,7 @@ class Callbacks(object):
 
     class SceneCreatedCallback(callback.AbstractCallback, object):
         """
-        Callback that is emitted when a new DCC scene is created
+        Callback that is called when a new DCC scene is created
         """
 
         _codes = [OpenMaya.MSceneMessage.kBeforeNew, OpenMaya.MSceneMessage.kBeforeOpen]

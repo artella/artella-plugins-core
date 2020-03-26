@@ -71,7 +71,8 @@ def add_menu(menu_name, parent_menu=None, tear_off=True):
         LOGGER.warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
         return None
 
-    native_menu = cmds.menu(parent=parent_menu, tearOff=tear_off, label=menu_name)
+    native_menu_name = '{}Menu'.format(menu_name.replace(' ', ''))
+    native_menu = cmds.menu(native_menu_name, parent=parent_menu, tearOff=tear_off, label=menu_name)
     if not native_menu:
         LOGGER.warning('Impossible to create native Maya menu "{}"'.format(menu_name))
         return None
@@ -108,4 +109,5 @@ def add_menu_item(menu_item_name, menu_item_command, parent_menu=None):
     :rtype: object or None
     """
 
-    return cmds.menuItem(parent=parent_menu, label=menu_item_name, command=menu_item_command)
+    native_menu_item = '{}MenuItem'.format(menu_item_name.replace(' ', ''))
+    return cmds.menuItem(native_menu_item, parent=parent_menu, label=menu_item_name, command=menu_item_command)
