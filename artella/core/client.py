@@ -98,7 +98,7 @@ class ArtellaDriveClient(object):
             self._auth_header = None
             return self._auth_header
 
-        with open(os.path.expanduser(ArtellaDriveClient._challenge_path)) as fp:
+        with open(os.path.expanduser(ArtellaDriveClient._challenge_path), 'rb') as fp:
             base_auth_header = fp.read()
         self._auth_header = consts.AUTH_HEADER.format(codecs.encode(base_auth_header[:64], 'hex').decode('ascii'))
 
