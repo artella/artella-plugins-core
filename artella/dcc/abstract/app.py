@@ -22,3 +22,16 @@ def version():
     """
 
     pass
+
+
+@reroute
+@abstract
+def scene_name():
+    """
+    Returns the name of the current scene
+
+    :return: Full file path name of the current scene. If no file is opened, None is returned.
+    :rtype: str or None
+    """
+
+    pass

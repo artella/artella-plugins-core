@@ -19,3 +19,14 @@ def version():
     """
 
     return (int(cmds.about(version=True)),)
+
+
+def scene_name():
+    """
+    Returns the name of the current scene
+
+    :return: Full file path name of the current scene. If no file is opened, None is returned.
+    :rtype: str or None
+    """
+
+    return cmds.file(query=True, sceneName=True)
