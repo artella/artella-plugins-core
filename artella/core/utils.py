@@ -7,8 +7,40 @@ Module that contains ArtellaDrive utils classes and functions
 
 from __future__ import print_function, division, absolute_import
 
+import sys
 import inspect
 from functools import wraps
+
+
+def is_python2():
+    """
+    Returns whether or not current version is Python 2
+    :return: bool
+    """
+
+    return sys.version_info.major == 2
+
+
+def is_python3():
+    """
+    Returns whether or not current version is Python 3
+    :return: bool
+    """
+
+    return sys.version_info.major == 3
+
+
+def clear_list(list_to_clear):
+    """
+    Clears given Python list. Works fine for both Python 2 and Python 3.
+
+    :param list_to_clear: list
+    """
+
+    if is_python2():
+        del list_to_clear[:]
+    else:
+        list_to_clear.clear()
 
 
 def force_list(var):
