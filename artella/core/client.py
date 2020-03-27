@@ -9,7 +9,13 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import json
+import codecs
+import socket
+import base64
+import random
+import hashlib
 import logging
+import threading
 try:
     from urllib.parse import urlparse, urlencode, urlunparse
     from urllib.request import urlopen, Request
@@ -19,9 +25,8 @@ except ImportError:
     from urllib import urlencode
     from urllib2 import urlopen, Request, HTTPError, URLError
 
+import artella
 from artella.core import consts, utils
-
-logging.basicConfig(level=logging.INFO)
 
 
 class ArtellaDriveClient(object):
@@ -32,10 +37,34 @@ class ArtellaDriveClient(object):
     _challenge_path = None
 
     def __init__(self, host=consts.DEFAULT_HOST, port=consts.DEFAULT_PORT):
-        self._host = host
-        self._port = port
-        self._auth_header = ''
-        self._batch_ids = set()
+        self._host = host               # Contains default IP host used by the client.
+        self._port = port               # Contains default port used by the client.
+        self._auth_header = ''          # Contains authentication header read from challenge file.
+        self._remote_sessions = list()  # Contains list of available remote sessions.
+        self._batch_ids = set()         # Contains a list that tracks all calls made to the client during a session.
+        self._socket_buffer = None      # Contains instance of the socket buffer used to communicate with Artella App
+        self._running = False           # Flag that is True while Artella Drive thread is running
+        self._exception = None          # Contains exception caused while Artella Drive is running
+
+    # ==============================================================================================================
+    # PROPERTIES
+    # ==============================================================================================================
+
+    @property
+    def running(self):
+        """
+        Returns whether or not current Artella Drive thread is running.
+        While Artella Drive thread is running, it listens responses from Artella Drive
+
+        :return: True if the Artella Drive thread is running; False otherwise
+        :rtype: bool
+        """
+
+        return self._running
+
+    # ==============================================================================================================
+    # CLASS FUNCTIONS
+    # ==============================================================================================================
 
     @classmethod
     def get(cls):
@@ -78,8 +107,7 @@ class ArtellaDriveClient(object):
 
     def update_auth_challenge(self):
         """
-        Collects some data from a local file to confirm we are running on the same that
-        Artella drive is running.
+        Collects some data from a local file to confirm we are running on the same that Artella drive is running.
 
         :return: string containing authentication header for current session or None if authentication was invalid
         :rtype: str or None
@@ -100,9 +128,45 @@ class ArtellaDriveClient(object):
 
         with open(os.path.expanduser(ArtellaDriveClient._challenge_path), 'rb') as fp:
             base_auth_header = fp.read()
+
         self._auth_header = consts.AUTH_HEADER.format(codecs.encode(base_auth_header[:64], 'hex').decode('ascii'))
 
         return self._auth_header
+
+    def get_remote_sessions(self):
+        """
+        Returns a list with all available remote sessions
+        :return: List of cached remote sessions in current Artella Drive Client
+        :rtype: list(str)
+        """
+
+        return self._remote_sessions
+
+    def update_remotes_sessions(self):
+        """
+        Collects all available remote servers available.
+
+        :return: List of available remote sessions received from Artella Drive App.
+        :rtype: list(str)
+        """
+
+        if not self.update_auth_challenge():
+            artella.log_error('Unable to authenticate to Artella Drive App.')
+            utils.clear_list(self._remote_sessions)
+            return
+
+        rsp = self.ping()
+        if 'error' in rsp:
+            artella.log_error('Attempting to retrieve remote sessions: "{}" '.format(rsp.get('error')))
+            utils.clear_list(self._remote_sessions)
+            return
+
+        self._remote_sessions = rsp.get('remote_sessions', list())
+        if not self._remote_sessions:
+            artella.log_warning(
+                'No remote sessions available. Please visit your Project Drive in Artella Web App and try again!')
+
+        return self._remote_sessions
 
     # ==============================================================================================================
     # SESSION
@@ -480,7 +544,7 @@ class ArtellaDriveClient(object):
             else:
                 try:
                     raw_data = "".join(chr(x) for x in bytearray(raw_data))
-                    json_data = json.loads(str(raw_data))
+                    json_data = json.loads(raw_data)
                 except ValueError:
                     logging.debug('ArtellaDrive data response: "{}"'.format(raw_data))
                     return raw_data
