@@ -81,6 +81,9 @@ class ArtellaDriveClient(object):
         # We need to check this each time in case the local server got restarted
         artella_client.update_auth_challenge()
 
+        # Updates the list of available remotes
+        artella_client.update_remotes_sessions()
+
         return artella_client
 
     # ==============================================================================================================
@@ -295,11 +298,13 @@ class ArtellaDriveClient(object):
     # FILES/FOLDERS
     # ==============================================================================================================
 
-    def status(self, path):
+    def status(self, path, include_remote=False):
         """
         Returns the status of a file from the remote server
 
         :param str path: Local path or Resolved URI path of a folder/file or list of folders/files
+        :param bool include_remote: Whether to inlucde remote server information into the response. Take into account
+            that this call can slow down the server response.
         :return:
         :rtype: dict
         :example:
@@ -323,12 +328,18 @@ class ArtellaDriveClient(object):
         }
         """
 
+        if not self.get_remote_sessions():
+            artella.log_warning(
+                'No remote sessions available. Artella App Drive status call aborted.')
+            return
+
         if not is_uri_path(path):
             path = path_to_uri(path)
 
         uri_parts = urlparse(path)
         params = urlencode({'handle': uri_parts.path})
-        req = Request('http://{}:{}/v2/localserve/fileinfo?{}'.format(self._host, self._port, params))
+        req = Request('http://{}:{}/v2/localserve/fileinfo?{}&include-remote={}'.format(
+            self._host, self._port, params, include_remote))
         rsp = self._communicate(req)
         if 'error' in rsp:
             logging.error('Attempting to retrieve status "{}" "{}"'.format(path, rsp.get('error')))
@@ -484,19 +495,85 @@ class ArtellaDriveClient(object):
 
         :return: Returns a success response or auth failure message
         :rtype: dict
-        :example:
-        >>> self.ping()
-        {
-            message: 'OK';
-            response: true;
-            status_code: 200;
-        }
         """
 
         req = Request('http://{}:{}/v2/localserve/ping'.format(self._host, self._port))
         rsp = self._communicate(req, skip_auth=True)
 
         return rsp
+
+    # ==============================================================================================================
+    # ARTELLA DRIVE APP
+    # ==============================================================================================================
+
+    def artella_drive_connect(self):
+        """
+        Connects to the local user Artella Drive App via web socket so we can listen for realtime events
+        :return:
+        """
+
+        # TODO: Using this we completely stop Artella client thread if an exception is arised
+        # if self._running:
+        #     self.artella_drive_disconnect()
+
+        server_address = (self._host, self._port)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logging.info('Connecting to Artella Drive App web socket: {}'.format(server_address))
+        try:
+            sock.connect(server_address)
+        except Exception as exc:
+            logging.error('Artella Plugin failed to connect to the Artella Drive App web socket: {}'.format(exc))
+            return
+
+        self.artella_drive_send_request(sock)
+        self._socket_buffer = SocketBuffer(sock)
+        rsp = self.artella_drive_read_response()
+
+        self._running = True
+
+        return rsp
+
+    def artella_drive_disconnect(self):
+        self._running = False
+
+    def artella_drive_listen(self):
+        try:
+            self.artella_drive_connect()
+            if not self._socket_buffer:
+                logging.error('Socket to Artella Drive not connected.')
+                return
+            threading.Thread(target=self._pull_messages,).start()
+        except Exception as exc:
+            artella.log_exception(exc)
+
+    def artella_drive_send_request(self, sock):
+
+        if not self.update_auth_challenge():
+            artella.log_error('Unable to authenticate to Artella Drive App.')
+            return
+
+        key, expected_key_response = make_ws_key()
+        path = '/v2/localserve/ws'
+        r = [
+            'GET {} HTTP/1.1'.format(path),
+            'Upgrade: websocket',
+            'Connection: Upgrade',
+            'Host: {}:{}'.format(self._host, self._port),
+            'Sec-WebSocket-Key: {}'.format(key),
+            'Sec-WebSocket-Version: 13',
+            'Authorization: {}'.format(self._auth_header),
+        ]
+        rr = consts.CRLF.join(r) + consts.CRLF + consts.CRLF
+        logging.debug('Artella Plugin sending websocket access request to the local Artella Drive App: {}'.format(r))
+        sock.sendall(rr)
+
+    def artella_drive_read_response(self):
+        logging.debug('Reading socket response ...')
+        line = ''
+        while line != consts.CRLF:
+            line = self._socket_buffer.read_line()
+
+        return line
 
     # ==============================================================================================================
     # INTERNAL
@@ -569,6 +646,86 @@ class ArtellaDriveClient(object):
         self._batch_ids.add(batch_id)
 
         return rsp
+
+    def _pull_messages(self):
+        artella.log_info('Listening for commands on websocket')
+        while self._running:
+            try:
+                if self._exception:
+                    self.artella_drive_connect()
+                    self._exception = None
+                msg = self._get_message()
+                logging.info('Message received: {}'.format(msg))
+                artella.Plugin().pass_message(msg)
+            except Exception as exc:
+                artella.log_exception(exc)
+                self._exception = exc
+
+    def _get_message(self):
+        op_code = ord(self._socket_buffer.get_char())
+        v = ord(self._socket_buffer.get_char())
+        if op_code != 129:
+            raise Exception('Not a final text frame: {}'.format(op_code))
+        if v < 126:
+            length = v
+        elif v == 126:
+            a = ord(self._socket_buffer.get_char()) << 8
+            b = ord(self._socket_buffer.get_char())
+            length = a + b
+        elif v == 127:
+            # 8 byte payload length - we do not have any of these
+            raise Exception('Unsupported payload length')
+        else:
+            raise Exception('Bad payload length: {}'.format(v))
+
+        payload = self._socket_buffer.get_chars(length)
+
+        return json.loads(payload)
+
+
+class SocketBuffer(object):
+    def __init__(self, sock):
+        super(SocketBuffer, self).__init__()
+
+        self._sock = sock
+        self._buffer = ''
+
+    def read_line(self):
+        line = ''
+        while True:
+            c = self.get_char()
+            line += c
+            if c == '\n':
+                return line
+
+    def get_char(self):
+        if len(self._buffer) == 0:
+            self._buffer = self._sock.recv(2000)
+        r = self._buffer[0]
+        self._buffer = self._buffer[1:]
+
+        return r
+
+    def get_chars(self, count):
+        cc = ''
+        for x in range(count):
+            cc += self.get_char()
+
+        return cc
+
+
+def make_ws_key():
+    """
+     https://tools.ietf.org/html/rfc6455
+    :return:
+    """
+
+    key = base64.b64encode(str(int(random.random() * 9999999)))
+    h = hashlib.sha1()
+    h.update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+    expected_key_response = base64.b64encode(h.digest())
+
+    return key, expected_key_response
 
 
 def is_uri_path(file_path):
