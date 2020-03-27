@@ -77,7 +77,7 @@ class ArtellaPlugin(object):
             dcc.remove_menu(self.MENU_NAME)
 
         artella_menu = dcc.add_menu(self.MENU_NAME)
-        dcc.add_menu_item(menu_item_name='Save to Cloud', menu_item_command='import artella; artella.Plugin().ping()', parent_menu=artella_menu)
+        dcc.add_menu_item(menu_item_name='Save to Cloud', menu_item_command='import artella; print(artella.Plugin().ping())', parent_menu=artella_menu)
         dcc.add_menu_item(menu_item_name='Get Dependencies', menu_item_command='', parent_menu=artella_menu)
         dcc.add_menu_item(menu_item_name='Convert File Paths', menu_item_command='', parent_menu=artella_menu)
 
@@ -109,14 +109,16 @@ class ArtellaPlugin(object):
 
         import artella.core.callback as callback
 
-        # Initialize DCC specific callbacks
         callback.initialize_callbacks()
 
     def remove_callbacks(self):
+        """
+        Removes all DCC Artella callbacks previously created
+        :return:
+        """
 
         import artella.core.callback as callback
 
-        # Uninitialize DCC callbacks
         callback.uninitialize_callbacks()
 
     # ==============================================================================================================
@@ -124,12 +126,27 @@ class ArtellaPlugin(object):
     # ==============================================================================================================
 
     def update_auth_challenge(self):
-        if not self._artella_drive_client:
-            return None
+        """
+        Updates the authentication header by checking challenge file (if available)
 
-        self._artella_drive_client.update_auth_challenge()
+        :return: True if the authenticator header was read successfully; False otherwise.
+        :rtype: bool
+        """
+
+        if not self._artella_drive_client:
+            return False
+
+        auth_header = self._artella_drive_client.update_auth_challenge()
+
+        return True if auth_header else False
 
     def get_client(self):
+        """
+        Returns current Artella Drive Client being used by Artella Plugin
+
+        :return: Instance of current ArtellaDriveClient being used; None if not Artella Drive Client is being used.
+        :rtype: ArtellaDriveClient or None
+        """
 
         if not self._artella_drive_client:
             return None
@@ -140,10 +157,22 @@ class ArtellaPlugin(object):
 
         return self._artella_drive_client
 
-    def pass_message(self):
+    def pass_message(self, json_data):
+        """
+
+        :param json_data:
+        :return:
+        """
+
         pass
 
     def handle_message(self, msg):
+        """
+        Internal function that handles the response received from Artella Drive App
+
+        :param dict msg: Dictionary containing the response from Artella server
+        """
+
         artella.log_debug('Handling realtime message: {}'.format(msg))
         if not isinstance(msg, dict):
             artella.log_warning('Malformed realtime message: {}'.format(msg))
@@ -153,6 +182,8 @@ class ArtellaPlugin(object):
 
         if command_name == 'authorization-ok':
             artella.log_info('websocket connection successful.')
+        elif command_name in ['version-check', 'progress-summary']:
+            pass
         else:
             artella.log_warning('unknown command on websocket: {}'.format(command_name))
 
