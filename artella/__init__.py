@@ -100,7 +100,7 @@ def init():
     # Make sure that Artella Drive client and DCC are cached during initialization
     current_dcc()
 
-    artella_drive_client = artella.core.client.ArtellaDriveClient()
+    artella_drive_client = artella.core.client.ArtellaDriveClient.get()
     artella.Plugin(artella_drive_client).init()
 
     return True
@@ -116,9 +116,13 @@ def shutdown():
 
     import artella
 
+    # Make sure that Artella Drive client and DCC are cached during initialization
+    current_dcc()
+
     artella.Plugin().shutdown()
 
     return True
+
 
 def _reload():
     """
@@ -169,6 +173,7 @@ def current_dcc():
         try:
             import_module(dcc_module_name)
             CURRENT_DCC = dcc_name
+            log_info('Current DCC: {}'.format(CURRENT_DCC))
             return CURRENT_DCC
         except ImportError as exc:
             continue
