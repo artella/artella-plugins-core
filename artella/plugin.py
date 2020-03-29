@@ -5,6 +5,10 @@
 Module that contains Artella Plugin functionality
 """
 
+from __future__ import print_function, division, absolute_import
+
+import os
+
 import artella
 import artella.dcc as dcc
 from artella.core.utils import abstract, Singleton
@@ -77,9 +81,12 @@ class ArtellaPlugin(object):
             dcc.remove_menu(self.MENU_NAME)
 
         artella_menu = dcc.add_menu(self.MENU_NAME)
-        dcc.add_menu_item(menu_item_name='Save to Cloud', menu_item_command='import artella; print(artella.Plugin().ping())', parent_menu=artella_menu)
-        dcc.add_menu_item(menu_item_name='Get Dependencies', menu_item_command='', parent_menu=artella_menu)
-        dcc.add_menu_item(menu_item_name='Convert File Paths', menu_item_command='', parent_menu=artella_menu)
+        dcc.add_menu_item(
+            menu_item_name='Save to Cloud',
+            menu_item_command='import artella; artella.Plugin().make_new_version()', parent_menu=artella_menu)
+        dcc.add_menu_item(
+            menu_item_name='Get Dependencies',
+            menu_item_command='import artella; artella.Plugin().get_dependencies()', parent_menu=artella_menu)
 
         return True
 
@@ -182,10 +189,30 @@ class ArtellaPlugin(object):
 
         if command_name == 'authorization-ok':
             artella.log_info('websocket connection successful.')
-        elif command_name in ['version-check', 'progress-summary']:
+        elif command_name in ['version-check', 'progress-summary', 'transfer-status-change']:
             pass
         else:
             artella.log_warning('unknown command on websocket: {}'.format(command_name))
+
+    def local_path_to_uri(self, file_path, prefix=None):
+        """
+        Translates a local file path to its URI format
+        :param str file_path: Absolute local file path we want to translate to URI
+        :param str prefix:
+
+        :return: path in its URI format if current DCC supports this feature; path without any change otherwise
+        :rtype: str
+        """
+
+        if prefix:
+            # TODO: (dave): Handle TCL based path strings from Pixar nodes
+            raise NotImplementedError('Support for TCL not implemented yet!')
+
+        if not dcc.supports_uri_scheme():
+            artella.log_warning('Current DCC {} does not supports Artella URI scheme!'.format(dcc.name()))
+            return file_path
+
+        return file_path
 
     def ping(self):
         """
@@ -196,8 +223,200 @@ class ArtellaPlugin(object):
          """
 
         artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return dict()
 
         return artella_drive_client.ping()
+
+    def get_version_comment(self, current_file):
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        file_version = artella_drive_client.file_current_version(current_file)[0]
+        next_version = file_version + 1
+        comment, ok = dcc.input_comment(
+            'Artella - Save to Cloud', 'Saving {} (version {})\n\nComment:'.format(
+                os.path.basename(current_file), next_version))
+        if not ok:
+            artella.log_info('Cancelled Save to Cloud operation by user.')
+            return False
+
+        return comment
+
+    def make_new_version(self):
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        current_file = dcc.scene_name()
+        if not current_file:
+            msg = 'Unable to get file name, has it been created!?'
+            artella.log_warning(msg)
+            dcc.show_warning(title='Artella Failed to make new version', message=msg)
+            return False
+
+        can_lock = self.can_lock_file(show_dialogs=False)
+        if not can_lock:
+            artella.log_error('Unable to lock file to make new version')
+
+        comment = self.get_version_comment(current_file=current_file)
+        if not comment:
+            return
+
+        file_version = artella_drive_client.file_current_version(current_file)[0]
+        next_version = file_version + 1
+        valid_lock = self.lock_file()
+        if not valid_lock:
+            msg = 'Unable to lock file to make new version ({})'.format(next_version)
+            artella.log_error('Unable to lock file to make new version')
+            dcc.show_error('Artella - Failed to make new version', msg)
+            return False
+
+        artella.log_info('Saving current scene: {}'.format(current_file))
+        valid_save = dcc.save_scene()
+        if not valid_save:
+            artella.log_error('Unable to save current scene: "{}"'.format(current_file))
+            return False
+
+        uri_path = self.local_path_to_uri(current_file)
+        rsp = artella_drive_client.upload(uri_path, comment=comment)
+        if rsp.get('error'):
+            msg = 'Unable to upload a new version of file: "{}"\n{}\n{}'.format(
+                os.path.basename(current_file), rsp.get('url'), rsp.get('error'))
+            dcc.show_error('Artella - Failed to make new version', msg)
+            return False
+
+        self.unlock_file(show_dialogs=False)
+
+        return True
+
+    def get_dependencies(self):
+        dcc.show_info('Artella - Get Dependencies', 'Get Dependnecies functionality is not implemented yet!')
+        return False
+
+    def can_lock_file(self, show_dialogs=True):
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        current_file = dcc.scene_name()
+        if not current_file:
+            msg = 'Unable to get file name, has it been created!?'
+            artella.log_warning(msg)
+            if show_dialogs:
+                dcc.show_warning(title='Artella - Failed to lock file', message=msg)
+            return False
+
+        file_version = artella_drive_client.file_current_version(current_file)
+        if not file_version:
+            return False
+
+        file_version = file_version[0]
+        if file_version <= 0:
+            artella.log_info('File "{}" is not versioned yet. No need to lock.'.format(current_file))
+            return True
+
+        is_locked, is_locked_by_me, is_locked_by_name = artella_drive_client.file_is_locked(current_file)
+
+        if not is_locked or (is_locked and is_locked_by_me):
+            return True
+
+        return False
+
+    def lock_file(self, file_path=None, force=False, show_dialogs=True):
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        if not file_path:
+            file_path = dcc.scene_name()
+            if not file_path:
+                msg = 'Unable to get file name, has it been created!?'
+                artella.log_warning(msg)
+                if show_dialogs:
+                    dcc.show_warning(title='Artella - Failed to lock file', message=msg)
+                return False
+
+        if not file_path or not os.path.isfile(file_path):
+            msg = 'File "{}" does not exists. Impossible to lock.'.format(file_path)
+            artella.log_warning(msg)
+            if show_dialogs:
+                dcc.show_error('Artella - Failed to lock File', msg)
+            return False
+
+        file_version = artella_drive_client.file_current_version(file_path)[0]
+        if file_version <= 0:
+            artella.log_info('File "{}" is not versioned yet. No need to lock.'.format(file_path))
+            return True
+
+        is_locked, is_locked_by_me, is_locked_by_name = artella_drive_client.file_is_locked(file_path)
+        can_write = os.access(file_path, os.W_OK)
+        if not can_write and is_locked_by_me:
+            artella.log_warning('Unable to determine local write permissions for file: "{}"'.format(file_path))
+        if is_locked and not is_locked_by_me:
+            msg = 'This file is locked by another user ({}). The file must be unlocked in order to save a new version.'
+            artella.log_warning(msg)
+            if show_dialogs:
+                dcc.show_warning('Artella - Failed to lock file', msg)
+            return False
+        elif force or not is_locked:
+            msg = '"{}" needs to be locked in order to save your file. ' \
+                  'Would you like to lock the file now?'.format(os.path.basename(file_path))
+            result = True
+            if show_dialogs:
+                result = dcc.show_question('Artella - lock file', msg, cancel=False)
+            if result is not True:
+                return False
+
+        valid_lock = artella_drive_client.lock_file(file_path)
+        if not valid_lock:
+            msg = 'Failed to lock "{}"'.format(file_path)
+            artella.log_warning(msg)
+            dcc.show_warning('Artella - Failed to lock file', msg)
+            return False
+
+        return True
+
+    def unlock_file(self, file_path=None, show_dialogs=True):
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        if not file_path:
+            file_path = dcc.scene_name()
+            if not file_path:
+                msg = 'Unable to get file name, has it been created!?'
+                artella.log_warning(msg)
+                if show_dialogs:
+                    dcc.show_warning(title='Artella - Failed to lock file', message=msg)
+                return False
+
+        if not file_path or not os.path.isfile(file_path):
+            msg = 'File "{}" does not exists. Impossible to unlock.'.format(file_path)
+            artella.log_warning(msg)
+            if show_dialogs:
+                dcc.show_error('Artella - Failed to unlock file', msg)
+            return False
+
+        result = True
+        if show_dialogs:
+            msg = 'You have file "{}" locked in Artella.\nUnlock it now?'.format(os.path.basename(file_path))
+            result = dcc.show_question('Artella - Unlock File', msg, cancel=False)
+        if result is not True:
+            return False
+
+        uri_path = self.local_path_to_uri(file_path)
+        valid_unlock = artella_drive_client.unlock_file(uri_path)
+        if not valid_unlock:
+            msg = 'Failed to unlock the file: "{}"\nTry unlocking it from the Artella ' \
+                  'Drive area in the web browser'.format(os.path.basename(file_path))
+            artella.log_warning(msg)
+            if show_dialogs:
+                dcc.show_error('Artella - Failed to unlock file', msg)
+            return False
+
+        return True
 
     # ==============================================================================================================
     # ABSTRACT

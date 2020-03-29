@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module that Maya Python API import
+Module for Maya Python API import
 """
 
 from __future__ import print_function, division, absolute_import
