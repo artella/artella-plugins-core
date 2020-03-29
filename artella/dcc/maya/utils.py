@@ -9,6 +9,11 @@ from __future__ import print_function, division, absolute_import
 
 import maya.cmds as cmds
 import maya.mel as mel
+import maya.OpenMayaUI as OpenMayaUI
+
+from artella.core import qtutils
+
+from artella.externals.Qt import QtWidgets
 
 
 def force_mel_stack_trace_on():
@@ -23,3 +28,16 @@ def force_mel_stack_trace_on():
         last_focused_command_reporter = mel.eval('$tmp = $gLastFocusedCommandReporter')
         if last_focused_command_reporter and last_focused_command_reporter != '':
             mel.eval('synchronizeScriptEditorOption 1 $stackTraceMenuItemSuffix')
+
+
+def get_maya_window():
+    """
+    Returns Qt object wrapping main Maya window object
+
+    :return: window object representing Maya Qt main window
+    :rtype: QMainWindow
+    """
+
+    ptr = OpenMayaUI.MQtUtil.mainWindow()
+
+    return qtutils.wrapinstance(ptr, QtWidgets.QMainWindow)

@@ -7,15 +7,13 @@ Module that contains Maya DCC plugin specific implementation
 
 from __future__ import print_function, division, absolute_import
 
+import maya.utils as utils
+
 import artella
 import artella.plugin as plugin
-
-from . import utils as maya_utils
 from artella.core.utils import Singleton
 
-import maya.cmds as cmds
-import maya.mel as mel
-import maya.utils as utils
+from . import utils as maya_utils
 
 
 class ArtellaMayaPlugin(plugin.ArtellaPlugin, object):
