@@ -43,11 +43,12 @@ def clear_list(list_to_clear):
         list_to_clear.clear()
 
 
-def force_list(var):
+def force_list(var, remove_duplicates=False):
     """
     Returns given variable as a list
 
     :param object var: variable we want to convert into a list
+    :param bool remove_duplicates: whether or not duplicated element should be removed from output list
     :return: Adds given variable into a list if the variable is not already a list. If the variable is None, an empty
         list is returned. If the variable is a tuple, the tuple is converted into a list
     :rtype: list(object)
@@ -61,6 +62,9 @@ def force_list(var):
             var = list(var)
         else:
             var = [var]
+
+    if remove_duplicates:
+        var = list(set(var))
 
     return var
 
