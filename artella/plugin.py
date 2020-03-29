@@ -438,4 +438,4 @@ class ArtellaPluginSingleton(ArtellaPlugin, object):
         ArtellaPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-artella.register_class('Plugin', ArtellaPlugin)
+artella.register_class('Plugin', ArtellaPluginSingleton)
