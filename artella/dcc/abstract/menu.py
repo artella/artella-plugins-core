@@ -52,7 +52,7 @@ def check_menu_exists(menu_name):
 
 @reroute
 @abstract
-def add_menu(menu_name, parent_menu=None, tear_off=True):
+def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
     """
     Creates a new DCC menu.
 
@@ -68,6 +68,7 @@ def add_menu(menu_name, parent_menu=None, tear_off=True):
 
 
 @reroute
+@abstract
 def remove_menu(menu_name):
     """
     Removes menu from current DCC if exists

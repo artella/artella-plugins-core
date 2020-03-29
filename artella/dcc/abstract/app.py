@@ -13,12 +13,38 @@ from artella.core.utils import abstract
 
 @reroute
 @abstract
+def name():
+    """
+    Returns name of current DCC
+
+    :return: Returns name of DCC without any info about version
+    :rtype: str
+    """
+
+    pass
+
+
+@reroute
+@abstract
 def version():
     """
-    Returns version of the current DCC application
+    Returns version of DCC application
 
     :return: Returns integer number indicating the version of the DCC application
     :rtype: int
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def extensions():
+    """
+    Returns a list of available extension for DCC application
+
+    :return: List of available extensions with the following format: .{EXTENSION}
+    :rtype: list(str)
     """
 
     pass
@@ -32,6 +58,44 @@ def scene_name():
 
     :return: Full file path name of the current scene. If no file is opened, None is returned.
     :rtype: str or None
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def scene_is_modified():
+    """
+    Returns whether or not current opened DCC file has been modified by the user or not
+
+    :return: True if current DCC file has been modified by the user; False otherwise
+    :rtype: bool
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def save_scene(force=True, **kwargs):
+    """
+    Saves DCC scene file
+
+    :param bool force: Whether to force the saving operation or not
+    :return:
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def supports_uri_scheme():
+    """
+    Returns whether or not current DCC support URI scheme implementation
+
+    :return: True if current DCC supports URI scheme implementation; False otherwise
     """
 
     pass
