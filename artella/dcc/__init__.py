@@ -8,6 +8,7 @@ Module that contains dcc module initialization
 from __future__ import print_function, division, absolute_import
 
 from artella.dcc.abstract.app import *
+from artella.dcc.abstract.ui import *
 from artella.dcc.abstract.menu import *
 from artella.dcc.abstract.callback import *
 from artella.dcc.abstract.parser import *
