@@ -30,10 +30,6 @@ class ArtellaMayaPlugin(plugin.ArtellaPlugin, object):
 
         super(ArtellaMayaPlugin, self).init()
 
-    def pass_message(self, json_data):
-        artella.log_debug('Passing message to Maya: {}'.format(json_data))
-        utils.executeInMainThreadWithResult(self.handle_message, json_data)
-
 
 @Singleton
 class ArtellaMayaPluginSingleton(ArtellaMayaPlugin, object):

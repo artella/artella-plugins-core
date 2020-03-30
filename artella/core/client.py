@@ -408,7 +408,7 @@ class ArtellaDriveClient(object):
         :param list(str) paths: List of file/folder paths (full or URI paths) to upload to the remote server
         :param bool folders_only: If True, only folder structure will be uploaded
         :param str comment: Comment that will be linked to the uploaded files/folders
-        :return:
+        :return: Response from Artella server after the upload operation is done.
         :rtype: dict
         >>> self.upload('artella:project__fo0pohsa2sea4wyr5zmzcwnzse/refs/ref.png')
         >>> self.upload('C:/Users/artella/artella-files/project/refs/', folders_only=True, comment='new folder')

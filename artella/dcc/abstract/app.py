@@ -99,3 +99,15 @@ def supports_uri_scheme():
     """
 
     pass
+
+
+@reroute
+@abstract
+def pass_message_to_main_thread(fn, data):
+    """
+    Executes given callable object in the DCC thread in the next idle event of that thread.
+    :param fn: callable object to execute
+    :param data: arguments to pass to the callable object
+    """
+
+    pass

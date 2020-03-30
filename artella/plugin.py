@@ -166,12 +166,14 @@ class ArtellaPlugin(object):
 
     def pass_message(self, json_data):
         """
-
+        Executes handle message Artella plugin functionality in specific DCC thread to make sure that it does not
+        conflicts with main DCC UI thread
         :param json_data:
-        :return:
+
         """
 
-        pass
+        artella.log_debug('Passing message to {}: {}'.format(dcc.name(), json_data))
+        dcc.pass_message_to_main_thread(self.handle_message, json_data)
 
     def handle_message(self, msg):
         """
@@ -229,6 +231,15 @@ class ArtellaPlugin(object):
         return artella_drive_client.ping()
 
     def get_version_comment(self, current_file):
+        """
+        Retrieves comment version in a DCC specific way.
+        This class can be override to retrieve the version comment on different ways
+
+        :param str current_file: Absolute local file path we want to create new comment for
+        :return: Typed comment write by the user
+        :rtype: str
+        """
+
         artella_drive_client = self.get_client()
         if not artella_drive_client:
             return False
@@ -244,7 +255,15 @@ class ArtellaPlugin(object):
 
         return comment
 
-    def make_new_version(self):
+    def make_new_version(self, show_dialogs=False):
+        """
+        Uploads a new file/folder or a new version of current opened DCC scene file
+
+        :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :return: True if the operation was successful; False otherwise
+        :rtype: bool
+        """
+
         artella_drive_client = self.get_client()
         if not artella_drive_client:
             return False
@@ -253,16 +272,16 @@ class ArtellaPlugin(object):
         if not current_file:
             msg = 'Unable to get file name, has it been created!?'
             artella.log_warning(msg)
-            dcc.show_warning(title='Artella Failed to make new version', message=msg)
+            if show_dialogs:
+                dcc.show_warning(title='Artella Failed to make new version', message=msg)
             return False
 
         can_lock = self.can_lock_file(show_dialogs=False)
         if not can_lock:
             artella.log_error('Unable to lock file to make new version')
+            return False
 
         comment = self.get_version_comment(current_file=current_file)
-        if not comment:
-            return
 
         file_version = artella_drive_client.file_current_version(current_file)[0]
         next_version = file_version + 1
@@ -270,7 +289,8 @@ class ArtellaPlugin(object):
         if not valid_lock:
             msg = 'Unable to lock file to make new version ({})'.format(next_version)
             artella.log_error('Unable to lock file to make new version')
-            dcc.show_error('Artella - Failed to make new version', msg)
+            if show_dialogs:
+                dcc.show_error('Artella - Failed to make new version', msg)
             return False
 
         artella.log_info('Saving current scene: {}'.format(current_file))
@@ -291,11 +311,16 @@ class ArtellaPlugin(object):
 
         return True
 
-    def get_dependencies(self):
-        dcc.show_info('Artella - Get Dependencies', 'Get Dependnecies functionality is not implemented yet!')
-        return False
-
     def can_lock_file(self, show_dialogs=True):
+        """
+        Returns whether or not current opened DCC file can locked or not
+        A file only can be locked if it is not already locked by other user.
+
+        :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :return: True if the file can be locked by current user; False otherwise.
+        :rtype: bool
+        """
+
         artella_drive_client = self.get_client()
         if not artella_drive_client:
             return False
@@ -325,6 +350,17 @@ class ArtellaPlugin(object):
         return False
 
     def lock_file(self, file_path=None, force=False, show_dialogs=True):
+        """
+        Locks given file path in Artella Drive.
+
+        :param str or None file_path: Absolute local file path we want to lock. If not given, current DCC scene file
+            will be locked.
+        :param bool force: Whether to force the lock operation. If the file is locked by other user, the lock is break.
+        :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :return: True if the lock operation was successful; False otherwise
+        :rtype: bool
+        """
+
         artella_drive_client = self.get_client()
         if not artella_drive_client:
             return False
@@ -379,6 +415,16 @@ class ArtellaPlugin(object):
         return True
 
     def unlock_file(self, file_path=None, show_dialogs=True):
+        """
+        Unlocks given file path in Artella Drive.
+
+        :param str or None file_path: Absolute local file path we want to lock. If not given, current DCC scene file
+            will be unlocked.
+        :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :return: True if the lock operation was successful; False otherwise
+        :rtype: bool
+        """
+
         artella_drive_client = self.get_client()
         if not artella_drive_client:
             return False
@@ -417,6 +463,15 @@ class ArtellaPlugin(object):
             return False
 
         return True
+
+    def get_dependencies(self):
+        """
+        Downloads from Artella server the latest versions available of all current DCC dependencies files
+        """
+
+        dcc.show_info('Artella - Get Dependencies', 'Get Dependnecies functionality is not implemented yet!')
+
+        return False
 
     # ==============================================================================================================
     # ABSTRACT
