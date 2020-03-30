@@ -11,6 +11,7 @@ import maya.cmds as cmds
 import maya.mel as mel
 import maya.OpenMayaUI as OpenMayaUI
 
+import artella
 from artella.core import qtutils
 
 from artella.externals.Qt import QtWidgets
@@ -21,13 +22,16 @@ def force_mel_stack_trace_on():
     Forces enabling Maya Stack Trace
     """
 
-    mel.eval('stackTrace -state on')
-    cmds.optionVar(intValue=('stackTraceIsOn', True))
-    what_is = mel.eval('whatIs "$gLastFocusedCommandReporter"')
-    if what_is != 'Unknown':
-        last_focused_command_reporter = mel.eval('$tmp = $gLastFocusedCommandReporter')
-        if last_focused_command_reporter and last_focused_command_reporter != '':
-            mel.eval('synchronizeScriptEditorOption 1 $stackTraceMenuItemSuffix')
+    try:
+        mel.eval('stackTrace -state on')
+        cmds.optionVar(intValue=('stackTraceIsOn', True))
+        what_is = mel.eval('whatIs "$gLastFocusedCommandReporter"')
+        if what_is != 'Unknown':
+            last_focused_command_reporter = mel.eval('$tmp = $gLastFocusedCommandReporter')
+            if last_focused_command_reporter and last_focused_command_reporter != '':
+                mel.eval('synchronizeScriptEditorOption 1 $stackTraceMenuItemSuffix')
+    except Exception as exc:
+        artella.log_debug(str(exc))
 
 
 def get_maya_window():
