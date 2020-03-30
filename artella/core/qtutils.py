@@ -39,7 +39,7 @@ if QT_AVAILABLE:
             except ImportError:
                 try:
                     from PySide import shiboken
-                except Exception:
+                except ImportError:
                     pass
 
 if utils.is_python3():

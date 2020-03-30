@@ -12,3 +12,4 @@ engines:
     enabled: true
 exclude_patterns:
   - "artella/externals/**"
+  - "tests/**"

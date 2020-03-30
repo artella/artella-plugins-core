@@ -742,7 +742,7 @@ class ArtellaDriveClient(object):
 
     def _get_message(self):
         op_code = ord(self._socket_buffer.get_char())
-        v = ord( self._socket_buffer.get_char())
+        v = ord(self._socket_buffer.get_char())
         if op_code != 129:
             raise Exception('Not a final text frame: {}'.format(op_code))
         if v < 126:
