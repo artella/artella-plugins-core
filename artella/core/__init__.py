@@ -7,5 +7,6 @@ Module that contains initialization code for artella.core
 
 import artella.core.consts
 import artella.core.utils
+import artella.core.qtutils
 import artella.core.callback
 import artella.core.client

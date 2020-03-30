@@ -34,22 +34,94 @@ CURRENT_DCC = None
 DCC_REROUTE_CACHE = dict()
 
 
-LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
+def log_debug(msg):
+    """
+    Uses Artella logger to log a debug message
+
+    :param str msg: debug message to log
+    """
+
+    logging.debug('Artella DEBUG: {}'.format(msg))
+
+
+def log_info(msg):
+    """
+    Uses Artella logger to log an info message
+
+    :param str msg: info message to log
+    """
+
+    logging.info('Artella INFO: {}'.format(msg))
+
+
+def log_warning(msg):
+    """
+    Uses Artella logger to log a warning message
+
+    :param str msg: warning message to log
+    """
+
+    logging.warning('Artella WARNING: {}'.format(msg))
+
+
+def log_error(msg):
+    """
+    Uses Artella logger to log a error message
+
+    :param str msg: error message to log
+    """
+
+    logging.warning('!Artella ERROR: {}'.format(msg))
+
+
+def log_exception(msg):
+    """
+    Uses Artella logger to log an exception message
+
+    :param str msg: exception message to log
+    """
+
+    logging.warning('!!Artella EXCEPTION: {}'.format(msg))
 
 
 def init():
     """
     Initializes Artella Plugin
+
+    :return: True if Artella initialization was successful; False otherwise.
+    :rtype: bool
     """
 
-    import artella.dcc as dcc
-    import artella.core.callback as callback
+    import artella.plugin
 
-    # Make sure that DCC is cached during initialization
+    # Make sure that Artella Drive client and DCC are cached during initialization
     current_dcc()
 
-    # Initialize DCC specific callbacks
-    callback.initialize_callbacks()
+    artella_drive_client = artella.core.client.ArtellaDriveClient.get()
+    artella.Plugin(artella_drive_client).init()
+
+    return True
+
+
+def shutdown():
+    """
+    Shutdown Artella Plugin
+
+    :return: True if Artella shutdown was successful; False otherwise.
+    :rtype: bool
+    """
+
+    import artella
+
+    # Make sure that Artella Drive client and DCC are cached during initialization
+    current_dcc()
+
+    artella.Plugin().shutdown()
+
+    return True
 
 
 def _reload():
@@ -58,15 +130,13 @@ def _reload():
     Useful when working inside DCC envs.
     """
 
-    # When reloading, caches are removed, so to make sure that all registered callbacks are removed we
-    # cleanup callbacks before reloading
-    import artella.core.callback as callback
-    callback.uninitialize_callbacks()
+    # Make sure that DCC and its related modules are imported before doing the reload
+    current_dcc()
 
-    to_clean = list()
-    for m in os.sys.modules.keys():
-        if 'artella' in m:
-            to_clean.append(m)
+    # We make sure that plugin is shutdown before doing reload
+    shutdown()
+
+    to_clean = [m for m in sys.modules.keys() if 'artella' in m]
     for t in to_clean:
         os.sys.modules.pop(t)
 
@@ -99,10 +169,11 @@ def current_dcc():
 
     # Loop through all available DCCs and check which one is available in current session
     for dcc_name in dccs():
-        dcc_module_name = '{}.{}'.format(ARTELLA_DCC_NAMESPACE, dcc_name)
+        dcc_module_name = '{}.{}'.format(consts.ARTELLA_DCC_NAMESPACE, dcc_name)
         try:
             import_module(dcc_module_name)
             CURRENT_DCC = dcc_name
+            log_info('Current DCC: {}'.format(CURRENT_DCC))
             return CURRENT_DCC
         except ImportError as exc:
             continue
@@ -127,7 +198,7 @@ def reroute(fn):
 
         # From the current function and DCC we retrieve module path where DCC implementation should be located
         fn_split = fn.__module__.split('.')
-        dcc_reroute_path = '{}.{}.{}'.format(ARTELLA_DCC_NAMESPACE, dcc, '.'.join(fn_split[3:]))
+        dcc_reroute_path = '{}.{}.{}'.format(consts.ARTELLA_DCC_NAMESPACE, dcc, '.'.join(fn_split[3:]))
         dcc_reroute_fn_path = '{}.{}'.format(dcc_reroute_path, fn.__name__)
         if dcc_reroute_fn_path not in DCC_REROUTE_CACHE:
             try:

@@ -7,15 +7,48 @@ Module that contains ArtellaDrive utils classes and functions
 
 from __future__ import print_function, division, absolute_import
 
+import sys
 import inspect
 from functools import wraps
 
 
-def force_list(var):
+def is_python2():
+    """
+    Returns whether or not current version is Python 2
+    :return: bool
+    """
+
+    return sys.version_info.major == 2
+
+
+def is_python3():
+    """
+    Returns whether or not current version is Python 3
+    :return: bool
+    """
+
+    return sys.version_info.major == 3
+
+
+def clear_list(list_to_clear):
+    """
+    Clears given Python list. Works fine for both Python 2 and Python 3.
+
+    :param list_to_clear: list
+    """
+
+    if is_python2():
+        del list_to_clear[:]
+    else:
+        list_to_clear.clear()
+
+
+def force_list(var, remove_duplicates=False):
     """
     Returns given variable as a list
 
     :param object var: variable we want to convert into a list
+    :param bool remove_duplicates: whether or not duplicated element should be removed from output list
     :return: Adds given variable into a list if the variable is not already a list. If the variable is None, an empty
         list is returned. If the variable is a tuple, the tuple is converted into a list
     :rtype: list(object)
@@ -29,6 +62,9 @@ def force_list(var):
             var = list(var)
         else:
             var = [var]
+
+    if remove_duplicates:
+        var = list(set(var))
 
     return var
 
@@ -64,3 +100,31 @@ def abstract(fn):
         raise NotImplementedError(debug_object_string(fn, msg))
 
     return wrapper
+
+
+class Singleton(object):
+    """
+    Implements Singleton pattern design as a class decorator in Python
+    """
+
+    all_instances = list()
+
+    @staticmethod
+    def destroy_all():
+        for instance in Singleton.all_instances:
+            instance.destroy()
+
+    def __init__(self, cls):
+        self.cls = cls
+        self.instance = None
+        self.all_instances.append(self)
+
+    def destroy(self):
+        del self.instance
+        self.instance = None
+
+    def __call__(self, *args, **kwargs):
+        if self.instance is None:
+            self.instance = self.cls(*args, **kwargs)
+
+        return self.instance

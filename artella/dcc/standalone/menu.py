@@ -2,15 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Module that contains DCC abstract menu functions
+Module that contains Standalone application menu functions
 """
 
-from artella import reroute
-from artella.core.utils import abstract
 
-
-@reroute
-@abstract
 def main_menu_toolbar():
     """
     Returns Main menu toolbar where DCC menus are created by default
@@ -19,11 +14,9 @@ def main_menu_toolbar():
     :rtype: object
     """
 
-    pass
+    return None
 
 
-@reroute
-@abstract
 def get_menus():
     """
     Return all the available menus in current DCC. This function returns specific DCC objects that represents DCC
@@ -33,11 +26,9 @@ def get_menus():
     :rtype: list(str)
     """
 
-    pass
+    return []
 
 
-@reroute
-@abstract
 def check_menu_exists(menu_name):
     """
     Returns whether or not menu with given name exists
@@ -47,12 +38,10 @@ def check_menu_exists(menu_name):
     :rtype: bool
     """
 
-    pass
+    return False
 
 
-@reroute
-@abstract
-def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
+def add_menu(menu_name, parent_menu=None, tear_off=True):
     """
     Creates a new DCC menu.
 
@@ -64,11 +53,9 @@ def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
     :rtype: object or None
     """
 
-    pass
+    return None
 
 
-@reroute
-@abstract
 def remove_menu(menu_name):
     """
     Removes menu from current DCC if exists
@@ -78,11 +65,9 @@ def remove_menu(menu_name):
     :rtype: bool
     """
 
-    pass
+    return False
 
 
-@reroute
-@abstract
 def add_menu_item(menu_item_name, menu_item_command, parent_menu):
     """
     Adds a new menu item to the given parent menu. When the item is clicked by the user the given command will be+
@@ -94,4 +79,4 @@ def add_menu_item(menu_item_name, menu_item_command, parent_menu):
     :rtype: object or None
     """
 
-    pass
+    return None

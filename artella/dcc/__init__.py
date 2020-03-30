@@ -8,6 +8,7 @@ Module that contains dcc module initialization
 from __future__ import print_function, division, absolute_import
 
 from artella.dcc.abstract.app import *
+from artella.dcc.abstract.ui import *
 from artella.dcc.abstract.menu import *
 from artella.dcc.abstract.callback import *
 from artella.dcc.abstract.parser import *
@@ -18,7 +19,12 @@ class DccCallbacks(object):
     Class that contains all callbacks that can be supported by DCCs
     """
 
+    BeforeOpenCheck = ('BeforeOpenCheck', {'type': 'simple'})
+    AfterOpen = ('AfterOpen', {'type': 'simple'})
+    SceneBeforeSave = ('SceneBeforeSave', {'type': 'simple'})
     SceneCreated = ('SceneCreated', {'type': 'simple'})
+    AfterLoadReference = ('AfterLoadReference', {'type': 'simple'})
+    BeforeCreateReferenceCheck = ('BeforeCreateReferenceCheck', {'type': 'simpple'})
 
 
 def is_standalone():

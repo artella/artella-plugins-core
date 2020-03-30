@@ -30,5 +30,8 @@ DEFAULT_PORT = 29282
 # Defines authentication header
 AUTH_HEADER = 'artella-file-challenge artella-challenge {}'
 
-# Defnes default note used by lock operation
+# Defines default note used by lock operation
 DEFAULT_LOCK_NOTE = 'Lock for use by plugin'
+
+# Control codes CL/RF to create new lines.
+CRLF = "\r\n"

@@ -5,12 +5,12 @@
 Module that contains Maya DCC menu functions
 """
 
-import logging
+from __future__ import print_function, division, absolute_import
 
 import maya.cmds as cmds
 import maya.mel as mel
 
-LOGGER = logging.getLogger(__name__)
+import artella
 
 
 def main_menu_toolbar():
@@ -52,14 +52,14 @@ def check_menu_exists(menu_name):
     return False
 
 
-def add_menu(menu_name, parent_menu=None, tear_off=True):
+def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
     """
     Creates a new DCC menu.
 
     :param str menu_name: name of the menu to create
     :param object parent_menu: parent menu to attach this menu into. If not given, menu will be added to
     specific DCC main menu toolbar. Must be specific menu DCC native object
-    :return: True if the menu was created successfully; False otherwise
+    :param bool tear_off: whether or not new created menu can be teared off
     :return: True if the menu was created successfully; False otherwise
     :rtype: bool
     """
@@ -68,12 +68,13 @@ def add_menu(menu_name, parent_menu=None, tear_off=True):
         parent_menu = main_menu_toolbar()
 
     if check_menu_exists(menu_name):
-        LOGGER.warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
+        artella.log_warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
         return None
 
-    native_menu = cmds.menu(parent=parent_menu, tearOff=tear_off, label=menu_name)
+    native_menu_name = '{}Menu'.format(menu_name.replace(' ', ''))
+    native_menu = cmds.menu(native_menu_name, parent=parent_menu, tearOff=tear_off, label=menu_name)
     if not native_menu:
-        LOGGER.warning('Impossible to create native Maya menu "{}"'.format(menu_name))
+        artella.log_warning('Impossible to create native Maya menu "{}"'.format(menu_name))
         return None
 
     return native_menu
@@ -108,4 +109,5 @@ def add_menu_item(menu_item_name, menu_item_command, parent_menu=None):
     :rtype: object or None
     """
 
-    return cmds.menuItem(parent=parent_menu, label=menu_item_name, command=menu_item_command)
+    native_menu_item = '{}MenuItem'.format(menu_item_name.replace(' ', ''))
+    return cmds.menuItem(native_menu_item, parent=parent_menu, label=menu_item_name, command=menu_item_command)

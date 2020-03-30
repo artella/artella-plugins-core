@@ -10,8 +10,6 @@ from __future__ import print_function, division, absolute_import
 import logging
 import traceback
 
-import artella
-
 LOGGER = logging.getLogger(__name__)
 
 # Cache used to store Artella callbacks
@@ -20,6 +18,7 @@ ARTELLA_CALLBACKS_CACHE = dict()
 
 def initialize_callbacks():
 
+    import artella
     import artella.dcc as dcc
 
     global ARTELLA_CALLBACKS_CACHE

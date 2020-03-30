@@ -10,4 +10,6 @@ engines:
         enabled: false
   shellcheck:
     enabled: true
-    
+exclude_patterns:
+  - "artella/externals/**"
+  - "tests/**"
