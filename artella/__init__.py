@@ -96,7 +96,7 @@ def init():
     """
 
     import artella.plugin
-    
+
     # Make sure that Artella Drive client and DCC are cached during initialization
     current_dcc()
 
