@@ -9,7 +9,7 @@ engines:
       E501:
         enabled: false
     exclude_patterns:
-      - **/externals/
+      - "**/externals/"
   shellcheck:
     enabled: true
     
