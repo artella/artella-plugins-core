@@ -7,6 +7,8 @@ Module that contains Blender DCC plugin specific implementation
 
 from __future__ import print_function, division, absolute_import
 
+import traceback
+
 import bpy
 
 import artella
@@ -44,7 +46,9 @@ class ArtellaBlenderPlugin(plugin.ArtellaPlugin, object):
         try:
             addon.unregister()
         except Exception as exc:
-            pass
+            artella.log_debug(
+                'Something went wrong while registering Artella Blender addon: {} | {}'.format(
+                    exc, traceback.format_exc()))
 
         super(ArtellaBlenderPlugin, self).shutdown()
 

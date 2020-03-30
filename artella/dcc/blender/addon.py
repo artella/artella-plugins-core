@@ -18,11 +18,10 @@ if blender_version[0] < 2:
 else:
     if blender_version[1] <= 79:
         def artella_menu_items(self, context):
-            l = (('SAVE_TO_CLOUD', 'Save to Cloud', 'Save file to cloud'),
-                 ('GET_DEPENDENCIES', 'Get Dependencies', 'Get Dependencies'))
-            artella_menu_items.lookup = {id: name for id, name, desc in l}
-            return l
-
+            items_list = (('SAVE_TO_CLOUD', 'Save to Cloud', 'Save file to cloud'),
+                          ('GET_DEPENDENCIES', 'Get Dependencies', 'Get Dependencies'))
+            artella_menu_items.lookup = {id: name for id, name, desc in items_list}
+            return items_list
 
         class ArtellaAddon(bpy.types.Operator):
             bl_idname = "artella.addon"
@@ -42,7 +41,6 @@ else:
 
                 return {'FINISHED'}
 
-
         def artella_menu(self, context):
             layout = self.layout
             layout.operator_menu_enum(ArtellaAddon.bl_idname, "artella_items", text=ArtellaAddon.bl_label)
@@ -50,7 +48,7 @@ else:
 
         class SaveToCloudProps(bpy.types.PropertyGroup):
 
-            comment : bpy.props.StringProperty(
+            comment: bpy.props.StringProperty(
                 name="Comment: ", description="Comment used for new version", default="")
 
         class SaveToCloudOperator(bpy.types.Operator):
