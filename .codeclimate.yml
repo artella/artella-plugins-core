@@ -8,6 +8,8 @@ engines:
     checks:
       E501:
         enabled: false
+    exclude_patterns:
+      - **/externals/
   shellcheck:
     enabled: true
     
