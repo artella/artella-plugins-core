@@ -104,7 +104,7 @@ def abstract(fn):
 
 class Singleton(object):
     """
-    Class that implements Singleton  pattern design as a class decorator in Python
+    Implements Singleton pattern design as a class decorator in Python
     """
 
     all_instances = list()
