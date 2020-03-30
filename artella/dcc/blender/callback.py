@@ -1,0 +1,12 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Module that contains Maya DCC callback implementation
+"""
+
+from __future__ import print_function, division, absolute_import
+
+
+# TODO (tpoveda): Keeps this file empty for now until we implement callback functionality for Blender. Do not remove
+# TODO (tpoveda): this module.
