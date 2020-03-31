@@ -57,6 +57,26 @@ def is_blender():
     return artella.current_dcc() == 'blender'
 
 
+def is_max():
+    """
+    Returns whether or not current DCC is 3ds Max
+    :return: True if current session DCC is 3ds Max; False otherwise
+    :rtype: bool
+    """
+
+    return artella.current_dcc() == 'max'
+
+
+def is_houdini():
+    """
+    Returns whether or not current DCC is Houdini
+    :return: True if current session DCC is Houdini; False otherwise
+    :rtype: bool
+    """
+
+    return artella.current_dcc() == 'houdini'
+
+
 def callbacks():
     """
     Returns a list of callbacks based on DCC available callbacks
