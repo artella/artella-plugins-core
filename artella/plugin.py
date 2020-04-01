@@ -213,14 +213,10 @@ class ArtellaPlugin(object):
                 self._handle_import_message(file_path)
             elif dcc_operation == 'reference':
                 self._handle_reference_message(file_path)
-            else:
-                artella.log_warning('unknown DCC command on websocket: {}'.format(command_name))
         elif command_name == 'authorization-ok':
             artella.log_info('websocket connection successful.')
-        elif command_name in ['version-check', 'progress-summary', 'transfer-status-change']:
-            pass
         else:
-            artella.log_warning('unknown command on websocket: {}'.format(command_name))
+            pass
 
     def artella_info(self):
         """
