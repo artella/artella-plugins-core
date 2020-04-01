@@ -78,12 +78,53 @@ def scene_is_modified():
 
 @reroute
 @abstract
+def open_scene(file_path, save=True):
+    """
+    Opens DCC scene file
+    :param str file_path: Absolute local file path we want to open in current DCC
+    :param bool save: Whether or not save current opened DCC scene file
+    :return: True if the save operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    pass
+
+
+@reroute
+@abstract
 def save_scene(force=True, **kwargs):
     """
     Saves DCC scene file
 
     :param bool force: Whether to force the saving operation or not
-    :return:
+    :return: True if the save operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def import_scene(file_path):
+    """
+    Opens scene file into current opened DCC scene file
+    :param str file_path: Absolute local file path we want to import into current DCC
+    :return: True if the import operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def reference_scene(file_path, **kwargs):
+    """
+    References scene file into current opened DCC scene file
+    :param str file_path: Absolute local file path we want to reference into current DCC
+    :return: True if the reference operation was successful; False otherwise
+    :rtype: bool
     """
 
     pass

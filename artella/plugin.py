@@ -27,6 +27,17 @@ class ArtellaPlugin(object):
     # INITIALIZATION / SHUTDOWN
     # ==============================================================================================================
 
+    def setup_project(self, artella_local_root_path):
+        """
+        Setup Artella local root as current DCC active project
+        This function should be override in specific DCC plugin implementation
+        Is not an abstract function because its implementation is not mandatory
+
+        :param str artella_local_root_path: current user Artella local root path
+        """
+
+        pass
+
     def init(self):
         """
         Initializes Artella plugin in current DCC
@@ -42,6 +53,9 @@ class ArtellaPlugin(object):
 
         artella_drive_client = self.get_client()
         artella_drive_client.artella_drive_listen()
+
+        # Setup DCC project
+        self.setup_project(artella_drive_client.get_local_root())
 
         return True
 
@@ -188,13 +202,34 @@ class ArtellaPlugin(object):
             return
 
         command_name = msg.get('type')
+        dcc_name = dcc.name()
 
-        if command_name == 'authorization-ok':
+        if command_name.startswith(dcc_name):
+            dcc_operation = command_name.split('-')[-1]
+            file_path = msg['data']['ARTELLA_FILE']
+            if dcc_operation == 'open':
+                self._handle_open_message(file_path)
+            elif dcc_operation == 'import':
+                self._handle_import_message(file_path)
+            elif dcc_operation == 'reference':
+                self._handle_reference_message(file_path)
+        elif command_name == 'authorization-ok':
             artella.log_info('websocket connection successful.')
-        elif command_name in ['version-check', 'progress-summary', 'transfer-status-change']:
-            pass
         else:
-            artella.log_warning('unknown command on websocket: {}'.format(command_name))
+            pass
+
+    def artella_info(self):
+        """
+        Function that prints useful information related with current Artella Plugin status
+        """
+
+        artella.log_info('Artella Plugin Status Info ...')
+        artella_drive_client = self.get_client()
+        artella.log_info(artella_drive_client.get_metadata())
+        artella.log_info(artella_drive_client.get_storage_id())
+        artella.log_info(artella_drive_client.ping())
+        artella.log_info(artella_drive_client.artella_drive_connect())
+        artella.log_info('Local Root: {}'.format(artella_drive_client.get_local_root()))
 
     def local_path_to_uri(self, file_path, prefix=None):
         """
@@ -472,6 +507,40 @@ class ArtellaPlugin(object):
         dcc.show_info('Artella - Get Dependencies', 'Get Dependnecies functionality is not implemented yet!')
 
         return False
+
+    # ==============================================================================================================
+    # INTERNAL
+    # ==============================================================================================================
+
+    def _handle_open_message(self, file_path):
+        """
+        Internal function that is called when websocket receives a message to open a file in DCC
+
+        :param str file_path: Absolute local file path we need to open in current DCC
+        :return:
+        """
+
+        return dcc.open_scene(filepath=file_path)
+
+    def _handle_import_message(self, file_path):
+        """
+        Internal function that is called when websocket receives a message to import a file in DCC
+
+        :param str file_path: Absolute local file path we need to import into current DCC
+        :return:
+        """
+
+        return dcc.import_scene(file_path=file_path)
+
+    def _handle_reference_message(self, file_path):
+        """
+        Internal function that is called when websocket receives a message to reference a file in DCC
+
+        :param str file_path: Absolute local file path we need to reference into current DCC
+        :return:
+        """
+
+        return dcc.reference_scene(file_path=file_path)
 
     # ==============================================================================================================
     # ABSTRACT

@@ -8,9 +8,15 @@ Module that contains Maya DCC application implementation
 from __future__ import print_function, division, absolute_import
 
 import os
+import string
+import traceback
 
 import maya.cmds as cmds
+import maya.mel as mel
 import maya.utils as utils
+
+import artella
+from artella.dcc.maya import utils as maya_utils
 
 
 def name():
@@ -68,6 +74,27 @@ def scene_is_modified():
     return cmds.file(query=True, modified=True)
 
 
+def open_scene(file_path, save=True):
+    """
+    Opens DCC scene file
+    :param str file_path: Absolute local file path we want to open in current DCC
+    :param bool save: Whether or not save current opened DCC scene file
+    :return: True if the save operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    if save:
+        save_scene()
+
+    file_path = cmds.encodeString(file_path)
+    scene_file = cmds.file(file_path, open=True, force=not save)
+    if isinstance(scene_file, (list, tuple)):
+        scene_file = scene_file[0]
+    file_path = file_path.replace('\\', '/')
+    mel.eval('$filepath = "{}";'.format(file_path))
+    mel.eval('addRecentFile $filepath "{}";'.format(scene_file))
+
+
 def save_scene(force=True, **kwargs):
     """
     Saves DCC scene file
@@ -94,6 +121,65 @@ def save_scene(force=True, **kwargs):
         else:
             cmds.file(save=True, type=maya_scene_type)
             return True
+
+
+def import_scene(file_path):
+    """
+    Opens scene file into current opened DCC scene file
+    :param str file_path: Absolute local file path we want to import into current DCC
+    :return: True if the import operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    file_path = cmds.encodeString(file_path)
+    cmds.file(file_path, i=True, force=True, ignoreVersion=True, preserveReferences=True)
+
+    return True
+
+
+def reference_scene(file_path, **kwargs):
+    """
+    References scene file into current opened DCC scene file
+    :param str file_path: Absolute local file path we want to reference into current DCC
+    :return: True if the reference operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    namespace = kwargs.get('namespace', None)
+
+    file_path = cmds.encodeString(file_path)
+
+    track_nodes = maya_utils.TrackNodes(full_path=True)
+    track_nodes.load()
+
+    try:
+        # If not namespace is given we generate one taking into account given file name
+        if not namespace:
+            use_rename = cmds.optionVar(query='referenceOptionsUseRenamePrefix')
+            if use_rename:
+                namespace = cmds.optionVar(q='referenceOptionsRenamePrefix')
+                rsp = cmds.file(file_path, reference=True, mergeNamespacesOnClash=False, namespace=namespace)
+                artella.log_debug(
+                    '{} = file({}, reference=True, mergeNamespacesOnClash=False, namespace={})'.format(
+                        rsp, file_path, namespace))
+            else:
+                namespace = os.path.basename(file_path)
+                split_name = namespace.split('.')
+                if split_name:
+                    namespace = string.join(split_name[:-1], '_')
+                rsp = cmds.file(file_path, reference=True, mergeNamespacesOnClash=False, namespace=namespace)
+                artella.log_debug(
+                    '{} = file({}, reference=True, mergeNamespacesOnClash=False, namespace={})'.format(
+                        rsp, file_path, namespace))
+    except Exception as exc:
+        artella.log_exception(
+            'Exception raised when referencing file "{}" | {} | {}'.format(file_path, exc, traceback.format_exc()))
+        return False
+
+    new_nodes = track_nodes.get_delta()
+    artella.log_info('Maya reference event referenced {} nodes'.format(len(new_nodes)))
+
+    return True
 
 
 def supports_uri_scheme():
