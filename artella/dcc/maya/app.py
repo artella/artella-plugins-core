@@ -15,7 +15,7 @@ import maya.cmds as cmds
 import maya.mel as mel
 import maya.utils as utils
 
-import artella
+from artella import logger
 from artella.dcc.maya import utils as maya_utils
 
 
@@ -63,6 +63,23 @@ def scene_name():
     return cmds.file(query=True, sceneName=True)
 
 
+def new_scene(force=True):
+    """
+    Creates a new scene inside DCC
+    :param force: True to skip saving of the current opened DCC scene; False otherwise.
+    :return: True if the new scene is created successfully; False otherwise.
+    :rtype: bool
+    """
+
+    if not force:
+        save_scene()
+
+    cmds.file(new=True, force=force)
+    cmds.flushIdleQueue()
+
+    return True
+
+
 def scene_is_modified():
     """
     Returns whether or not current opened DCC file has been modified by the user or not
@@ -87,12 +104,20 @@ def open_scene(file_path, save=True):
         save_scene()
 
     file_path = cmds.encodeString(file_path)
-    scene_file = cmds.file(file_path, open=True, force=not save)
-    if isinstance(scene_file, (list, tuple)):
-        scene_file = scene_file[0]
+    cmds.file(file_path, open=True, force=not save)
     file_path = file_path.replace('\\', '/')
-    mel.eval('$filepath = "{}";'.format(file_path))
-    mel.eval('addRecentFile $filepath "{}";'.format(scene_file))
+
+    scene_ext = os.path.splitext(file_path)[-1]
+    scene_type = None
+    if scene_ext == '.ma':
+        scene_type = 'mayaAscii'
+    elif scene_ext == '.mb':
+        scene_type = 'mayaBinary'
+    if scene_type:
+        mel.eval('$filepath = "{}";'.format(file_path))
+        mel.eval('addRecentFile $filepath "{}";'.format(scene_type))
+
+    return True
 
 
 def save_scene(force=True, **kwargs):
@@ -159,7 +184,7 @@ def reference_scene(file_path, **kwargs):
             if use_rename:
                 namespace = cmds.optionVar(q='referenceOptionsRenamePrefix')
                 rsp = cmds.file(file_path, reference=True, mergeNamespacesOnClash=False, namespace=namespace)
-                artella.log_debug(
+                logger.log_debug(
                     '{} = file({}, reference=True, mergeNamespacesOnClash=False, namespace={})'.format(
                         rsp, file_path, namespace))
             else:
@@ -168,16 +193,16 @@ def reference_scene(file_path, **kwargs):
                 if split_name:
                     namespace = string.join(split_name[:-1], '_')
                 rsp = cmds.file(file_path, reference=True, mergeNamespacesOnClash=False, namespace=namespace)
-                artella.log_debug(
+                logger.log_debug(
                     '{} = file({}, reference=True, mergeNamespacesOnClash=False, namespace={})'.format(
                         rsp, file_path, namespace))
     except Exception as exc:
-        artella.log_exception(
+        logger.log_exception(
             'Exception raised when referencing file "{}" | {} | {}'.format(file_path, exc, traceback.format_exc()))
         return False
 
     new_nodes = track_nodes.get_delta()
-    artella.log_info('Maya reference event referenced {} nodes'.format(len(new_nodes)))
+    logger.log_info('Maya reference event referenced {} nodes'.format(len(new_nodes)))
 
     return True
 
@@ -200,3 +225,15 @@ def pass_message_to_main_thread(fn, data):
     """
 
     utils.executeInMainThreadWithResult(fn, data)
+
+
+def clean_path(file_path):
+    """
+    Cleans given path so it can be properly used by current DCC
+
+    :param str file_path: file path we want to clean
+    :return: Cleaned version of the given file path
+    :rtype: str
+    """
+
+    return cmds.encodeString(file_path)
