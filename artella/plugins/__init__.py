@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Initialization module for artella
+Initialization module for artella-plugins
 """
 
 from __future__ import print_function, division, absolute_import

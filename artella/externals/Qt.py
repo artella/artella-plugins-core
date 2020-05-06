@@ -66,6 +66,9 @@ except NameError:
     # Python 3 compatibility
     long = int
 
+if False:
+    from PySide2 import QtCore, QtWidgets, QtGui
+
 
 """Common members of all bindings
 
