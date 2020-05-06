@@ -10,11 +10,12 @@ from __future__ import print_function, division, absolute_import
 import bpy
 
 import artella
+from artella import logger
 
 
 blender_version = bpy.app.version
 if blender_version[0] < 2:
-    artella.log_warning('Versions of Blender lower than 2 are not supported!')
+    logger.log_warning('Versions of Blender lower than 2 are not supported!')
 else:
     if blender_version[1] <= 79:
         def artella_menu_items(self, context):
@@ -34,10 +35,10 @@ else:
                 sel_item_text = artella_menu_items.lookup[self.artella_items]
                 if sel_item_text == 'Save to Cloud':
                     self.report({'INFO'}, 'Artella - Saving to Cloud')
-                    artella.Plugin().make_new_version()
+                    artella.DccPlugin().make_new_version()
                 elif sel_item_text == 'Get Dependencies':
                     self.report({'INFO'}, 'Artella - Get dependencies')
-                    artella.Plugin().get_dependencies()
+                    artella.DccPlugin().get_dependencies()
 
                 return {'FINISHED'}
 
@@ -57,7 +58,7 @@ else:
             bl_description = 'Creates a new version of current opened file in Artella'
 
             def execute(self, context):
-                artella.Plugin().make_new_version()
+                artella.DccPlugin().make_new_version()
 
                 return {'FINISHED'}
 
@@ -66,7 +67,7 @@ else:
             bl_label = "Get Dependencies"
 
             def execute(self, context):
-                artella.Plugin().get_dependencies()
+                artella.DccPlugin().get_dependencies()
 
                 return {'FINISHED'}
 
