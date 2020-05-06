@@ -7,9 +7,16 @@ Module that contains ArtellaDrive utils classes and functions
 
 from __future__ import print_function, division, absolute_import
 
+import os
 import sys
+import imp
+import json
+import fnmatch
 import inspect
+import importlib
 from functools import wraps
+
+from artella import logger
 
 
 def is_python2():
@@ -28,6 +35,48 @@ def is_python3():
     """
 
     return sys.version_info.major == 3
+
+
+def clean_path(path):
+    """
+    Returns a cleaned path to make sure that we do not have problems with path slashes
+    :param str path: path we want to clean
+    :return: clean path
+    :rtype: str
+    """
+
+    # Convert '~' Unix char to user's home directory and remove spaces and bad slashes
+    path = os.path.expanduser(str(path))
+    path = str(path.replace('\\', '/').replace('//', '/').rstrip('/').strip())
+
+    # Fix server paths
+    is_server_path = path.startswith('\\')
+    while '\\' in path:
+        path = path.replace('\\', '//')
+    if is_server_path:
+        path = '//{}'.format(path)
+
+    # Fix web paths
+    if not path.find('https://') > -1:
+        path = path.replace('//', '/')
+
+    return path
+
+
+def split_path(path, clean_drive=True):
+    """
+    Splits given paths in all its sub parts
+
+    :param str path: Path we want to retrieve parts of
+    :param clean_drive: True if we want to remove the drive from the result; False otherwise.
+    :return: List of sub parts in the given path
+    :rtype: list(str)
+    """
+
+    if clean_drive:
+        path = os.path.splitdrive(path)[-1]
+
+    return [next(part for part in path.split(os.path.sep) if part)]
 
 
 def clear_list(list_to_clear):
@@ -69,6 +118,27 @@ def force_list(var, remove_duplicates=False):
     return var
 
 
+def get_files(root_folder, pattern='*'):
+    """
+    Returns files found in given folder and sub folders taking into accunt the given pattern
+    :param str root_folder: root folder where we want to start searching from
+    :param str pattern: find pattern that we use to filter our search for specific file names or extensions
+    :return: List of files located in given root folder hierarhcy and with the given pattern
+    :rtype: list(str)
+    """
+
+    if not root_folder or not os.path.isdir(root_folder):
+        return list()
+
+    files_found = list()
+
+    for dir_path, dir_names, file_names in os.walk(root_folder):
+        for file_name in fnmatch.filter(file_names, pattern):
+            files_found.append(clean_path(os.path.join(dir_path, file_name)))
+
+    return list(set(files_found))
+
+
 def debug_object_string(obj, msg):
     """
     Returns a debug string depending of the type of the object
@@ -87,6 +157,130 @@ def debug_object_string(obj, msg):
         return '[%s.%s.%s method] :: %s' % (obj.im_class.__module__, obj.im_class.__name__, obj.__name__, msg)
     elif inspect.isfunction(obj):
         return '[%s.%s function] :: %s' % (obj.__module__, obj.__name__, msg)
+
+
+def import_module(module_path, name=None):
+    """
+    Imports the given module path. If the given module path is a dotted one, import lib will be used. Otherwise, it's
+    expected that given module path is the absolute path to the source file. If name argument is not given, then the
+    basename without the extension will be used
+    :param module_path: str, module path. Can be a dotted path (tpDcc.libs.python.modules) or an absolute one
+    :param name: str, name for the imported module which will be used if the module path is an absolute path
+    :return: ModuleObject, imported module object
+    """
+
+    if is_dotted_module_path(module_path) and not os.path.exists(module_path):
+        try:
+            return importlib.import_module(module_path)
+        except ImportError as exc:
+            logger.log_exception('Failed to load module: "{}" | {}'.format(module_path, exc))
+            return None
+
+    try:
+        if os.path.exists(module_path):
+            if not name:
+                name = os.path.splitext(os.path.basename(module_path))[0]
+            if name in sys.modules:
+                return sys.modules[name]
+        if os.path.isdir(module_path):
+            module_path = os.path.join(module_path, '__init__.py')
+            if not os.path.exists(module_path):
+                raise ValueError('Cannot find module path: "{}"'.format(module_path))
+        return imp.load_source(name, os.path.realpath(module_path))
+    except ImportError:
+        logger.log_error('Failed to load module: "{}"'.format(module_path))
+        return None
+
+
+def iterate_modules(path, exclude=None):
+    """
+    Iterates all Python modules of the given path
+    :param str path: folder path to iterate searching for Python modules
+    :param list(str) exclude: list of files to exclude during the searching process
+    :return: Iterator with all the found modules
+    :rtype: iterator
+    """
+
+    if not exclude:
+        exclude = list()
+
+    _exclude = ['__init__.py', '__init__.pyc']
+    for root, dirs, files in os.walk(path):
+        if '__init__.py' not in files:
+            continue
+        for f in files:
+            base_name = os.path.splitext(f)[0]
+            if f not in _exclude and base_name not in exclude:
+                module_path = os.path.join(root, f)
+                if f.endswith('.py') or f.endswith('.pyc'):
+                    yield module_path
+
+
+def iterate_module_members(module_to_iterate, predicate=None):
+    """
+    Iterates all the members of the given modules
+    :param ModuleObject module_to_iterate: module object to iterate members of
+    :param inspect.cass predicate: if given members will be restricted to given inspect class
+    :return:
+    :rtype: iterator
+    """
+
+    for mod in inspect.getmembers(module_to_iterate, predicate=predicate):
+        yield mod
+
+
+def is_dotted_module_path(module_path):
+    """
+    Returns whether given module path is a dotted one (tpDcc.libs.python.modules) or not
+    :param str module_path:
+    :return:
+    :rtype: bool
+    """
+
+    return len(module_path.split('.')) >= 2
+
+
+def convert_module_path_to_dotted_path(path):
+    """
+    Returns a dotted path relative to the given path
+    :param str  path: str, Path to module we want to convert to dotted path (eg. myPlugin/folder/test.py)
+    :return: dotted path (eg. folder.test)
+    :rtype: str
+    """
+
+    directory, file_path = os.path.split(path)
+    directory = clean_path(directory)
+    file_name = os.path.splitext(file_path)[0]
+    package_path = [file_name]
+    sys_path = [clean_path(p) for p in sys.path]
+    drive_letter = os.path.splitdrive(path)[0] + '\\'
+    while directory not in sys_path:
+        directory, name = os.path.split(directory)
+        directory = clean_path(directory)
+        if directory == drive_letter or name == '':
+            return ''
+        package_path.append(name)
+
+    return '.'.join(reversed(package_path))
+
+
+def read_json(filename):
+    """
+    Get data from JSON file
+    """
+
+    if os.stat(filename).st_size == 0:
+        return None
+    else:
+        try:
+            with open(filename, 'r') as json_file:
+                data = json.load(json_file)
+        except Exception as err:
+            logger.log_warning('Could not read {0}'.format(filename))
+            raise err
+
+    return data
+
 
 
 def abstract(fn):
