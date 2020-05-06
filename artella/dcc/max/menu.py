@@ -9,7 +9,7 @@ from __future__ import print_function, division, absolute_import
 
 import MaxPlus
 
-import artella
+from artella import logger
 
 DEFAULT_MAX_MENUS = [
     'Edit', 'Tools', 'Group', 'View', 'Create' 'Modifiers', 'Graph Editors', 'Rendering', 'Civil View',
@@ -52,7 +52,7 @@ def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
     """
 
     if check_menu_exists(menu_name):
-        artella.log_warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
+        logger.log_warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
         return None
 
     menu_builder = MaxPlus.MenuBuilder(menu_name)
@@ -73,7 +73,7 @@ def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
     else:
         native_menu = MaxPlus.MenuManager.FindMenu(menu_name)
     if not native_menu:
-        artella.log_warning('Impossible to create native 3ds Max menu "{}"'.format(menu_name))
+        logger.log_warning('Impossible to create native 3ds Max menu "{}"'.format(menu_name))
         return None
 
     return native_menu

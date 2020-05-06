@@ -8,19 +8,15 @@ Module that contains Maya DCC plugin specific implementation
 from __future__ import print_function, division, absolute_import
 
 import artella
+from artella import register
 import artella.dcc as dcc
 import artella.plugin as plugin
 from artella.core.utils import Singleton
 
 
 class ArtellaMaxPlugin(plugin.ArtellaPlugin, object):
-    pass
-
-
-@Singleton
-class ArtellaMaxPluginSingleton(ArtellaMaxPlugin, object):
-    def __init__(self, artella_drive_client=None):
-        ArtellaMaxPlugin.__init__(self, artella_drive_client=artella_drive_client)
+    def __init__(self, artella_drive_client):
+        super(ArtellaMaxPlugin, self).__init__(artella_drive_client=artella_drive_client)
 
     def create_menus(self):
         """
@@ -31,14 +27,20 @@ class ArtellaMaxPluginSingleton(ArtellaMaxPlugin, object):
         :rtype: bool
         """
 
-        if dcc.check_menu_exists(self.MENU_NAME):
-            dcc.remove_menu(self.MENU_NAME)
+        if dccs.check_menu_exists(self.MENU_NAME):
+            dccs.remove_menu(self.MENU_NAME)
 
         menu_items = [
-            {'name': 'Save to Cloud', 'command': 'import artella; artella.Plugin().make_new_version()'},
-            {'name': 'Get Dependencies', 'command': 'import artella; artella.Plugin().get_dependencies()'}
+            {'name': 'Save to Cloud', 'command': 'import artella; artella.DccPlugin().make_new_version()'},
+            {'name': 'Get Dependencies', 'command': 'import artella; artella.DccPlugin().get_dependencies()'}
         ]
-        dcc.add_menu(self.MENU_NAME, items=menu_items)
+        dccs.add_menu(self.MENU_NAME, items=menu_items)
 
 
-artella.register_class('Plugin', ArtellaMaxPluginSingleton)
+@Singleton
+class ArtellaMaxPluginSingleton(ArtellaMaxPlugin, object):
+    def __init__(self, artella_drive_client=None):
+        ArtellaMaxPlugin.__init__(self, artella_drive_client=artella_drive_client)
+
+
+register.register_class('Plugin', ArtellaMaxPluginSingleton)
