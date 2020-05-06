@@ -7,23 +7,24 @@ Module that contains core callback functionality
 
 from __future__ import print_function, division, absolute_import
 
-import logging
+import inspect
 import traceback
 
-LOGGER = logging.getLogger(__name__)
+from artella import logger
 
 # Cache used to store Artella callbacks
 ARTELLA_CALLBACKS_CACHE = dict()
 
 
-def initialize_callbacks():
 
-    import artella
-    import artella.dcc as dcc
+def initialize_callbacks():
 
     global ARTELLA_CALLBACKS_CACHE
     if ARTELLA_CALLBACKS_CACHE:
         return
+
+    import artella
+    from artella import dcc
 
     shutdown_type = None
     if hasattr(artella.Callbacks, 'ShutdownCallback'):
@@ -40,9 +41,9 @@ def initialize_callbacks():
 
         callback_class = getattr(artella.Callbacks, '{}Callback'.format(callback_name), None)
         if not callback_class:
-            LOGGER.warning(
+            logger.log_warning(
                 'Dcc {} does not provides a Callback implementation for {}Callback. Skipping ...'.format(
-                    artella.current_dcc(), callback_name))
+                    dcc.name(), callback_name))
             continue
 
         # This should not be necessary. We added just to be sure that no callbacks are registered in scenes
@@ -53,7 +54,7 @@ def initialize_callbacks():
 
         ARTELLA_CALLBACKS_CACHE[callback_name] = callback_type(callback_class, shutdown_type)
 
-        LOGGER.info('Creating Callback: {} | {}'.format(callback_name, callback_class))
+        logger.log_debug('Creating Callback: {} | {}'.format(callback_name, callback_class))
 
 
 def register(callback_type, fn):
@@ -69,6 +70,12 @@ def register(callback_type, fn):
 
     if isinstance(callback_type, (list, tuple)):
         callback_type = callback_type[0]
+
+    if inspect.isclass(callback_type):
+        callback_type = callback_type.__name__
+
+    if callback_type.endswith('Callback'):
+        callback_type = callback_type.replace('Callback', '')
 
     if callback_type in ARTELLA_CALLBACKS_CACHE.keys():
         ARTELLA_CALLBACKS_CACHE[callback_type].register(fn)
@@ -360,15 +367,15 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
         """
 
         entry = next((e for e in self._registry if e.callback == fn), None)
-        LOGGER.debug(
+        logger.log_debug(
             'Started: ({}) {} Register - fn:"{}", entry:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), str(entry)))
         if not entry:
             token = self._connect(fn) if self.connected else None
-            LOGGER.debug(
+            logger.log_debug(
                 '({}) {} Register - token:"{}"'.format(str(self._notifier), self.__class__.__name__, str(token)))
             self._registry.append(SimpleCallbackWrapper.RegistryEntry(fn, token))
-        LOGGER.debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
 
     def unregister(self, fn):
         """
@@ -378,28 +385,28 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
         """
 
         entry = next((e for e in self._registry if e.callback == fn), None)
-        LOGGER.debug(
+        logger.log_debug(
             'Started: ({}) {} Unregister - fn:"{}", entry:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), str(entry)))
         if entry:
             self._disconnect(entry.token)
             self._registry.remove(entry)
-        LOGGER.debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
 
     def _shutdown(self, *args):
         """
         Forces an unregistering from the notifier
         """
 
-        LOGGER.debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
         for entry in self._registry:
-            LOGGER.debug(
+            logger.log_debug(
                 '{}._shutdown - Disconnecting ({}) {}'.format(str(self._notifier), self.__class__.__name__, str(entry)))
             self._disconnect(entry.token)
         del self._registry[:]
 
         super(SimpleCallbackWrapper, self)._shutdown(*args)
-        LOGGER.debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
 
 
 class FilterCallbackWrapper(CallbackWrapper, object):
@@ -466,14 +473,14 @@ class FilterCallbackWrapper(CallbackWrapper, object):
         Forces an unregistering from the notifier
         """
 
-        LOGGER.debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
         if self._token:
             self._token = self._disconnect(self._token)
             self._token = None
         del self._registry[:]
 
         super(self.__class__, self)._shutdown(*args)
-        LOGGER.debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
 
     def _notify(self, *args):
         """
@@ -500,7 +507,7 @@ class FilterCallbackWrapper(CallbackWrapper, object):
             try:
                 entry.callback(*args)
             except Exception as exc:
-                LOGGER.error('{} | {}'.format(exc, traceback.format_exc()))
+                logger.error('{} | {}'.format(exc, traceback.format_exc()))
 
     def register(self, fn):
         """
@@ -509,15 +516,15 @@ class FilterCallbackWrapper(CallbackWrapper, object):
         :param fn: a valid Python function with a variable number of arguments (exp. *args)
         """
 
-        LOGGER.debug(
+        logger.log_debug(
             'Started: ({}) {} Register - fn:"{}", IsEmpty:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), bool(self.empty)))
         if self.empty:
             self._token = self._connect(self._notify)
-            LOGGER.debug(
+            logger.log_debug(
                 '({}) {} Register - token:"{}"'.format(str(self._notifier), self.__class__.__name__, str(self._token)))
         self._registry.append(FilterCallbackWrapper.RegistryEntry(fn))
-        LOGGER.debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
 
     def unregister(self, fn):
         """
@@ -527,7 +534,7 @@ class FilterCallbackWrapper(CallbackWrapper, object):
         """
 
         entry = next((e for e in self._registry if e.callback == fn), None)
-        LOGGER.debug(
+        logger.log_debug(
             'Started: ({}) {} Unregister - fn:"{}", IsEmpty:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), bool(self.empty)))
 
@@ -535,7 +542,7 @@ class FilterCallbackWrapper(CallbackWrapper, object):
             self._registry.remove(entry)
 
         if self.empty and self.connected:
-            LOGGER.debug(
+            logger.log_debug(
                 '({}) {} Unregister token:"{}"'.format(str(self._notifier), self.__class__.__name__, str(self._token)))
             self._token = self._disconnect(self._token)
-        LOGGER.debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
+        logger.log_debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
