@@ -10,7 +10,7 @@ from __future__ import print_function, division, absolute_import
 import maya.cmds as cmds
 import maya.mel as mel
 
-import artella
+from artella import logger
 
 
 def main_menu_toolbar():
@@ -35,6 +35,22 @@ def get_menus():
     return cmds.lsUI(menus=True)
 
 
+def get_menu(menu_name):
+    """
+    Returns native DCC menu with given name
+    :param str menu_name: name of the menu to search for
+    :return: Native DCC menu object or None if the menu does not exists
+    :rtype: str or None
+    """
+
+    for menu in get_menus():
+        menu_label = cmds.menu(menu, query=True, label=True)
+        if menu_label == menu_name or menu == menu_name:
+            return menu
+
+    return None
+
+
 def check_menu_exists(menu_name):
     """
     Returns whether or not menu with given name exists
@@ -46,7 +62,7 @@ def check_menu_exists(menu_name):
 
     for menu in get_menus():
         menu_label = cmds.menu(menu, query=True, label=True)
-        if menu_label == menu_name:
+        if menu_label == menu_name or menu_name == menu:
             return True
 
     return False
@@ -68,13 +84,13 @@ def add_menu(menu_name, parent_menu=None, tear_off=True, **kwargs):
         parent_menu = main_menu_toolbar()
 
     if check_menu_exists(menu_name):
-        artella.log_warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
+        logger.log_warning('Menu "{}" already exists. Skipping creation.'.format(menu_name))
         return None
 
     native_menu_name = '{}Menu'.format(menu_name.replace(' ', ''))
     native_menu = cmds.menu(native_menu_name, parent=parent_menu, tearOff=tear_off, label=menu_name)
     if not native_menu:
-        artella.log_warning('Impossible to create native Maya menu "{}"'.format(menu_name))
+        logger.log_warning('Impossible to create native Maya menu "{}"'.format(menu_name))
         return None
 
     return native_menu
@@ -111,3 +127,38 @@ def add_menu_item(menu_item_name, menu_item_command, parent_menu=None):
 
     native_menu_item = '{}MenuItem'.format(menu_item_name.replace(' ', ''))
     return cmds.menuItem(native_menu_item, parent=parent_menu, label=menu_item_name, command=menu_item_command)
+
+
+def remove_menu_item(menu_item_name, parent_menu):
+    """
+    Removes a menu item from the given parent menu.
+    :param str menu_item_name: name of the menu item to remove
+    :param str parent_menu: parent menu to remove this menu from. Must be specific menu DCC native object
+    :return: Try if the operation was successful; False otherwise.
+    :rtype: bool
+    """
+
+    menu = get_menu(parent_menu)
+    if not menu:
+        return False
+
+    menu_items = cmds.menu(menu, itemArray=True, query=True)
+    if not menu_items:
+        return False
+
+    for item in menu_items:
+        item_name = cmds.menuItem(item, label=True, query=True)
+        if item_name == menu_item_name or item == menu_item_name:
+            cmds.deleteUI(item, menuItem=True)
+            return True
+
+    return False
+
+
+def add_menu_separator(parent_menu):
+    """
+    Adds a new separator to the given parent menu
+    :param object parent_menu: parent menu to attach this menu into. Must be specific menu DCC native object
+    """
+
+    return cmds.menuItem(divider=True, parent=parent_menu)
