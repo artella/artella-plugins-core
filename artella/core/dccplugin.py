@@ -2,26 +2,30 @@
 # -*- coding: utf-8 -*-
 
 """
-Module that contains Artella Plugin functionality
+Module that contains Artella DCC Plugin functionality
 """
 
 from __future__ import print_function, division, absolute_import
 
 import os
+import time
 
 import artella
-import artella.dcc as dcc
-from artella.core.utils import abstract, Singleton
+from artella import dcc
+from artella import logger
+from artella import register
+from artella.core import utils
 
 
-class ArtellaPlugin(object):
+class ArtellaDccPlugin(object):
 
     MENU_NAME = 'Artella'
 
     def __init__(self, artella_drive_client):
-        super(ArtellaPlugin, self).__init__()
+        super(ArtellaDccPlugin, self).__init__()
 
         self._artella_drive_client = artella_drive_client
+        self._main_menu = None
 
     # ==============================================================================================================
     # INITIALIZATION / SHUTDOWN
@@ -38,6 +42,25 @@ class ArtellaPlugin(object):
 
         pass
 
+    def register_extensions(self):
+        """
+        Register specific extensions for this DCC
+        This function should be override in specific DCC plugin implementation
+        Is not an abstract function because its implementation is not mandatory
+        """
+
+        dcc_extensions = dcc.extensions()
+        if not dcc_extensions:
+            return
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            logger.log_warning(
+                'Artella Drive was not initialized. Impossible to register extensions: {}'.format(dcc_extensions))
+            return
+
+        artella_drive_client.register_extensions(dcc_extensions)
+
     def init(self):
         """
         Initializes Artella plugin in current DCC
@@ -52,10 +75,13 @@ class ArtellaPlugin(object):
         self.create_menus()
 
         artella_drive_client = self.get_client()
-        artella_drive_client.artella_drive_listen()
-
-        # Setup DCC project
-        self.setup_project(artella_drive_client.get_local_root())
+        if artella_drive_client:
+            artella_drive_client.artella_drive_listen()
+            self.setup_project(artella_drive_client.get_local_root())
+        else:
+            logger.log_warning(
+                'Artella Drive Client was not initialized. Artella server '
+                'dependant functionality will not be available!')
 
         return True
 
@@ -83,6 +109,14 @@ class ArtellaPlugin(object):
     #  MENU
     # ==============================================================================================================
 
+    def get_main_menu(self):
+        """
+        Returns instance of Artella main menu
+        :return:
+        """
+
+        return self._main_menu
+
     def create_menus(self):
         """
         Setup DCC Artella menu.
@@ -95,12 +129,19 @@ class ArtellaPlugin(object):
             dcc.remove_menu(self.MENU_NAME)
 
         artella_menu = dcc.add_menu(self.MENU_NAME)
-        dcc.add_menu_item(
-            menu_item_name='Save to Cloud',
-            menu_item_command='import artella; artella.Plugin().make_new_version()', parent_menu=artella_menu)
-        dcc.add_menu_item(
-            menu_item_name='Get Dependencies',
-            menu_item_command='import artella; artella.Plugin().get_dependencies()', parent_menu=artella_menu)
+        if not artella_menu:
+            return False
+
+        self._main_menu = artella_menu
+
+        # dcc.add_menu_item(
+        #     menu_item_name='Save to Cloud',
+        #     menu_item_command='import artella; artella.DccPlugin().make_new_version(show_dialogs=True)',
+        #     parent_menu=artella_menu)
+        # dcc.add_menu_item(
+        #     menu_item_name='Get Dependencies',
+        #     menu_item_command='import artella; artella.DccPlugin().get_dependencies(show_dialogs=True)',
+        #     parent_menu=artella_menu)
 
         return True
 
@@ -141,6 +182,17 @@ class ArtellaPlugin(object):
         import artella.core.callback as callback
 
         callback.uninitialize_callbacks()
+
+    def validate_environment_for_callback(self, callback_name):
+        """
+        Checks that all necessary parts are available before executing a Maya callback
+
+        :param str callback_name: name of the callback to validate
+        """
+
+        logger.log_info('validate_environment_for_callback for {}'.format(callback_name))
+        client = self.get_client()
+        local_root = dcc.clean_path()
 
     # ==============================================================================================================
     # ARTELLA DRIVE APP
@@ -186,7 +238,7 @@ class ArtellaPlugin(object):
 
         """
 
-        artella.log_debug('Passing message to {}: {}'.format(dcc.name(), json_data))
+        logger.log_debug('Passing message to {}: {}'.format(dcc.name(), json_data))
         dcc.pass_message_to_main_thread(self.handle_message, json_data)
 
     def handle_message(self, msg):
@@ -196,9 +248,9 @@ class ArtellaPlugin(object):
         :param dict msg: Dictionary containing the response from Artella server
         """
 
-        artella.log_debug('Handling realtime message: {}'.format(msg))
+        logger.log_debug('Handling realtime message: {}'.format(msg))
         if not isinstance(msg, dict):
-            artella.log_warning('Malformed realtime message: {}'.format(msg))
+            logger.log_warning('Malformed realtime message: {}'.format(msg))
             return
 
         command_name = msg.get('type')
@@ -207,14 +259,15 @@ class ArtellaPlugin(object):
         if command_name.startswith(dcc_name):
             dcc_operation = command_name.split('-')[-1]
             file_path = msg['data']['ARTELLA_FILE']
-            if dcc_operation == 'open':
-                self._handle_open_message(file_path)
-            elif dcc_operation == 'import':
+            if dcc_operation == 'import':
                 self._handle_import_message(file_path)
             elif dcc_operation == 'reference':
                 self._handle_reference_message(file_path)
         elif command_name == 'authorization-ok':
-            artella.log_info('websocket connection successful.')
+            logger.log_debug('websocket connection successful.')
+        elif command_name == 'open':
+            file_path = msg['data']['ARTELLA_FILE']
+            self._handle_open_message(file_path)
         else:
             pass
 
@@ -223,13 +276,17 @@ class ArtellaPlugin(object):
         Function that prints useful information related with current Artella Plugin status
         """
 
-        artella.log_info('Artella Plugin Status Info ...')
+        logger.log_info('Artella Plugin Status Info ...')
         artella_drive_client = self.get_client()
-        artella.log_info(artella_drive_client.get_metadata())
-        artella.log_info(artella_drive_client.get_storage_id())
-        artella.log_info(artella_drive_client.ping())
-        artella.log_info(artella_drive_client.artella_drive_connect())
-        artella.log_info('Local Root: {}'.format(artella_drive_client.get_local_root()))
+        logger.log_info(artella_drive_client.get_metadata())
+        logger.log_info(artella_drive_client.get_storage_id())
+        logger.log_info(artella_drive_client.ping())
+        logger.log_info(artella_drive_client.artella_drive_connect())
+        logger.log_info('Local Root: {}'.format(artella_drive_client.get_local_root()))
+
+    # ==============================================================================================================
+    # FILE PATHS
+    # ==============================================================================================================
 
     def local_path_to_uri(self, file_path, prefix=None):
         """
@@ -246,56 +303,116 @@ class ArtellaPlugin(object):
             raise NotImplementedError('Support for TCL not implemented yet!')
 
         if not dcc.supports_uri_scheme():
-            artella.log_warning('Current DCC {} does not supports Artella URI scheme!'.format(dcc.name()))
+            logger.log_warning('Current DCC {} does not supports Artella URI scheme!'.format(dcc.name()))
             return file_path
 
         return file_path
 
-    def ping(self):
+    def translate_path(self, file_path):
         """
-         Test call that returns whether the Artella Drive is valid or not
+        Converts a file path to a local file path taking into account the available projects.
 
-         :return: Returns a success response or auth failure message
-         :rtype: dict
-         """
-
-        artella_drive_client = self.get_client()
-        if not artella_drive_client:
-            return dict()
-
-        return artella_drive_client.ping()
-
-    def get_version_comment(self, current_file):
-        """
-        Retrieves comment version in a DCC specific way.
-        This class can be override to retrieve the version comment on different ways
-
-        :param str current_file: Absolute local file path we want to create new comment for
-        :return: Typed comment write by the user
+        :param str file_path: File path we want to to translate to its user local version
+        :return: User local version of the given path
         :rtype: str
+        :example:
+        >>> self.translate_path("C:/Users/Bobby/artella-files/ProjectA/Assets/Characters/A/Model/a.ma")
+        "C:/Users/Tomi/artella/data/ProjectA/Assets/Characters/A/Model/a.ma"
+        >>> self.translate_path("/ProjectA/Assets/Characters/A/Model/a.ma")
+        "C:/Users/Tomi/artella/data/ProjectA/Assets/Characters/A/Model/a.ma"
+        """
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return file_path
+
+        return artella_drive_client.translate_path(file_path)
+
+    def convert_path(self, file_path):
+        """
+        Converts given path to a path that Artella can understand
+
+        :param str file_path: File path we want to convert
+        :return: str
+        :rtype: str
+        :example:
+        >>> self.translate_path("C:/Users/Bobby/artella-files/ProjectA/Assets/Characters/A/Model/a.ma")
+        "$$ART_LOCAL_ROOT/ProjectA/Assets/Characters/A/Model/a.ma"
+        >>> self.translate_path("/ProjectA/Assets/Characters/A/Model/a.ma")
+        "$ART_LOCAL_ROOT/ProjectA/Assets/Characters/A/Model/a.ma"
+        """
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return file_path
+
+        return artella_drive_client.convert_path(file_path)
+
+    def update_paths(self, file_path=None, show_dialogs=True, call_post_function=True, skip_save=True):
+        """
+        Updates all file paths of the given file path to make sure that they point to valid Artella file paths
+        :param file_path:
+        :param show_dialogs:
+        :param call_post_function:
+        :param skip_save:
+        :return:
         """
 
         artella_drive_client = self.get_client()
         if not artella_drive_client:
             return False
 
-        file_version = artella_drive_client.file_current_version(current_file)[0]
-        next_version = file_version + 1
-        comment, ok = dcc.input_comment(
-            'Artella - Save to Cloud', 'Saving {} (version {})\n\nComment:'.format(
-                os.path.basename(current_file), next_version))
-        if not ok:
-            artella.log_info('Cancelled Save to Cloud operation by user.')
+        if not file_path:
+            file_path = dcc.scene_name()
+        if not file_path:
+            msg = 'No file paths given to convert. Impossible to update paths.'
+            logger.log_warning(msg)
+            if show_dialogs:
+                dcc.show_warning(title='Artella - Failed to update paths', message=msg)
             return False
 
-        return comment
+        file_paths = utils.force_list(file_path, remove_duplicates=True)
 
-    def make_new_version(self, show_dialogs=False):
+        for file_path in file_paths:
+
+            local_path = artella_drive_client.translate_path(file_path)
+
+            ext = os.path.splitext(local_path)[-1]
+            if ext not in dcc.extensions() or not os.path.isfile(local_path):
+                logger.log_info('Skipping non DCC scene file path from conversion: "{}"'.format(local_path))
+                continue
+
+            can_lock = artella.DccPlugin().can_lock_file(local_path, show_dialogs=False)
+            if not can_lock:
+                logger.log_warning(
+                    'File "{}" cannot be locked and paths cannot be updated. Skipping ...'.format(local_path))
+                continue
+
+            if dcc.scene_name() != file_path:
+                dcc.open_scene(file_path, save=True)
+
+            parser = artella.Parser()
+            valid_convert = parser.update_paths(local_path)
+
+            if valid_convert and not skip_save:
+                dcc.save_scene()
+
+        if call_post_function:
+            self._post_update_paths()
+
+    # ==============================================================================================================
+    # VERSIONS
+    # ==============================================================================================================
+
+    def make_new_version(self, file_path=None, comment=None):
         """
         Uploads a new file/folder or a new version of current opened DCC scene file
 
-        :param bool show_dialogs: Whether UI dialogs should appear or not.
-        :return: True if the operation was successful; False otherwise
+        :param str file_path: Optional path of the file we want to create new version of. If not given, current
+            opened DCC scene file path will be used.
+        :param str comment: Optional comment to add to new version metadata. If not given, a generic message will be
+            used.
+        :return: True if the make new version operation is completed successfully; False otherwise.
         :rtype: bool
         """
 
@@ -303,54 +420,65 @@ class ArtellaPlugin(object):
         if not artella_drive_client:
             return False
 
-        current_file = dcc.scene_name()
-        if not current_file:
-            msg = 'Unable to get file name, has it been created!?'
-            artella.log_warning(msg)
-            if show_dialogs:
-                dcc.show_warning(title='Artella Failed to make new version', message=msg)
-            return False
+        if not file_path:
+            file_path = dcc.scene_name()
+            if not file_path:
+                msg = 'Please open a file before creating a new version'
+                logger.log_warning(msg)
+                return False
 
-        can_lock = self.can_lock_file(show_dialogs=False)
+        can_lock = artella_drive_client.can_lock_file(file_path=file_path)
         if not can_lock:
-            artella.log_error('Unable to lock file to make new version')
+            msg = 'Unable to lock file to make new version. File is already locked by other user.'
+            dcc.show_error('File already locked by other user', msg)
+            logger.log_error(msg)
             return False
 
-        comment = self.get_version_comment(current_file=current_file)
+        version_created = True
 
-        file_version = artella_drive_client.file_current_version(current_file)[0]
+        comment = str(comment) if comment else 'New file version'
+
+        file_version = artella_drive_client.file_current_version(file_path)
         next_version = file_version + 1
-        valid_lock = self.lock_file()
-        if not valid_lock:
-            msg = 'Unable to lock file to make new version ({})'.format(next_version)
-            artella.log_error('Unable to lock file to make new version')
-            if show_dialogs:
-                dcc.show_error('Artella - Failed to make new version', msg)
-            return False
 
-        artella.log_info('Saving current scene: {}'.format(current_file))
+        is_locked, _, _, _ = artella_drive_client.check_lock(file_path)
+
+        if not is_locked:
+            valid_lock = self.lock_file()
+            if not valid_lock:
+                msg = 'Unable to lock file to make new version ({})'.format(next_version)
+                logger.log_error(msg)
+                return False
+
+        logger.log_info('Saving current scene: {}'.format(file_path))
         valid_save = dcc.save_scene()
         if not valid_save:
-            artella.log_error('Unable to save current scene: "{}"'.format(current_file))
-            return False
+            logger.log_error('Unable to save current scene: "{}"'.format(file_path))
+            version_created = False
+        else:
+            uri_path = self.local_path_to_uri(file_path)
+            rsp = artella_drive_client.upload(uri_path, comment=comment)
+            if rsp.get('error'):
+                msg = 'Unable to upload a new version of file: "{}"\n{}\n{}'.format(
+                    os.path.basename(file_path), rsp.get('url'), rsp.get('error'))
+                version_created = False
 
-        uri_path = self.local_path_to_uri(current_file)
-        rsp = artella_drive_client.upload(uri_path, comment=comment)
-        if rsp.get('error'):
-            msg = 'Unable to upload a new version of file: "{}"\n{}\n{}'.format(
-                os.path.basename(current_file), rsp.get('url'), rsp.get('error'))
-            dcc.show_error('Artella - Failed to make new version', msg)
-            return False
+        if not is_locked:
+            self.unlock_file(show_dialogs=False)
 
-        self.unlock_file(show_dialogs=False)
+        return version_created
 
-        return True
+    # ==============================================================================================================
+    # LOCK/UNLOCK STATUS
+    # ==============================================================================================================
 
-    def can_lock_file(self, show_dialogs=True):
+    def can_lock_file(self, file_path=None, show_dialogs=True):
         """
         Returns whether or not current opened DCC file can locked or not
         A file only can be locked if it is not already locked by other user.
 
+        :param str or None file_path: Absolute local file path we want to check if can be locked or not. If not given,
+            current DCC scene file will be locked.
         :param bool show_dialogs: Whether UI dialogs should appear or not.
         :return: True if the file can be locked by current user; False otherwise.
         :rtype: bool
@@ -360,29 +488,16 @@ class ArtellaPlugin(object):
         if not artella_drive_client:
             return False
 
-        current_file = dcc.scene_name()
-        if not current_file:
-            msg = 'Unable to get file name, has it been created!?'
-            artella.log_warning(msg)
+        if not file_path:
+            file_path = dcc.scene_name()
+        if not file_path:
+            msg = 'File "{}" does not exists. Impossible to check lock status!'.format(file_path)
+            logger.log_warning(msg)
             if show_dialogs:
-                dcc.show_warning(title='Artella - Failed to lock file', message=msg)
+                dcc.show_warning(title='Artella - Failed to check lost status', message=msg)
             return False
 
-        file_version = artella_drive_client.file_current_version(current_file)
-        if not file_version:
-            return False
-
-        file_version = file_version[0]
-        if file_version <= 0:
-            artella.log_info('File "{}" is not versioned yet. No need to lock.'.format(current_file))
-            return True
-
-        is_locked, is_locked_by_me, is_locked_by_name = artella_drive_client.file_is_locked(current_file)
-
-        if not is_locked or (is_locked and is_locked_by_me):
-            return True
-
-        return False
+        return artella_drive_client.can_lock_file(file_path)
 
     def lock_file(self, file_path=None, force=False, show_dialogs=True):
         """
@@ -404,30 +519,30 @@ class ArtellaPlugin(object):
             file_path = dcc.scene_name()
             if not file_path:
                 msg = 'Unable to get file name, has it been created!?'
-                artella.log_warning(msg)
+                logger.log_warning(msg)
                 if show_dialogs:
                     dcc.show_warning(title='Artella - Failed to lock file', message=msg)
                 return False
 
         if not file_path or not os.path.isfile(file_path):
             msg = 'File "{}" does not exists. Impossible to lock.'.format(file_path)
-            artella.log_warning(msg)
+            logger.log_warning(msg)
             if show_dialogs:
                 dcc.show_error('Artella - Failed to lock File', msg)
             return False
 
-        file_version = artella_drive_client.file_current_version(file_path)[0]
+        file_version = artella_drive_client.file_current_version(file_path)
         if file_version <= 0:
-            artella.log_info('File "{}" is not versioned yet. No need to lock.'.format(file_path))
+            logger.log_info('File "{}" is not versioned yet. No need to lock.'.format(file_path))
             return True
 
-        is_locked, is_locked_by_me, is_locked_by_name = artella_drive_client.file_is_locked(file_path)
+        is_locked, is_locked_by_me, is_locked_by_name, remote_record_found = artella_drive_client.check_lock(file_path)
         can_write = os.access(file_path, os.W_OK)
         if not can_write and is_locked_by_me:
-            artella.log_warning('Unable to determine local write permissions for file: "{}"'.format(file_path))
+            logger.log_warning('Unable to determine local write permissions for file: "{}"'.format(file_path))
         if is_locked and not is_locked_by_me:
             msg = 'This file is locked by another user ({}). The file must be unlocked in order to save a new version.'
-            artella.log_warning(msg)
+            logger.log_warning(msg)
             if show_dialogs:
                 dcc.show_warning('Artella - Failed to lock file', msg)
             return False
@@ -443,7 +558,7 @@ class ArtellaPlugin(object):
         valid_lock = artella_drive_client.lock_file(file_path)
         if not valid_lock:
             msg = 'Failed to lock "{}"'.format(file_path)
-            artella.log_warning(msg)
+            logger.log_warning(msg)
             dcc.show_warning('Artella - Failed to lock file', msg)
             return False
 
@@ -468,14 +583,14 @@ class ArtellaPlugin(object):
             file_path = dcc.scene_name()
             if not file_path:
                 msg = 'Unable to get file name, has it been created!?'
-                artella.log_warning(msg)
+                logger.log_warning(msg)
                 if show_dialogs:
                     dcc.show_warning(title='Artella - Failed to lock file', message=msg)
                 return False
 
         if not file_path or not os.path.isfile(file_path):
             msg = 'File "{}" does not exists. Impossible to unlock.'.format(file_path)
-            artella.log_warning(msg)
+            logger.log_warning(msg)
             if show_dialogs:
                 dcc.show_error('Artella - Failed to unlock file', msg)
             return False
@@ -492,25 +607,71 @@ class ArtellaPlugin(object):
         if not valid_unlock:
             msg = 'Failed to unlock the file: "{}"\nTry unlocking it from the Artella ' \
                   'Drive area in the web browser'.format(os.path.basename(file_path))
-            artella.log_warning(msg)
+            logger.log_warning(msg)
             if show_dialogs:
                 dcc.show_error('Artella - Failed to unlock file', msg)
             return False
 
         return True
 
-    def get_dependencies(self):
+    # ==============================================================================================================
+    # DOWNLOAD
+    # ==============================================================================================================
+
+    def download_file(self, file_path, show_dialogs=True):
         """
-        Downloads from Artella server the latest versions available of all current DCC dependencies files
+        Downloads a file from Artella server
+
+        :param str file_path: File we want to download from Artella server
+        :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :return: True if the download operation was successful; False otherwise.
+        :example:
+        >>> self.download_file("C:/Users/artella/artella-files/ProjectA/Assets/test/model/hello.a")
+        True
         """
 
-        dcc.show_info('Artella - Get Dependencies', 'Get Dependnecies functionality is not implemented yet!')
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
 
-        return False
+        local_path = artella_drive_client.translate_path(file_path)
+
+        dcc_progress_bar = artella.ProgressBar()
+        dcc_progress_bar.start()
+
+        artella_drive_client.download(local_path)
+        time.sleep(1.0)
+
+        valid_download = True
+        while True:
+            if show_dialogs:
+                if dcc_progress_bar.is_cancelled():
+                    artella_drive_client.pause_downloads()
+                    valid_download = False
+                    break
+            progress, fd, ft, bd, bt = artella_drive_client.get_progress()
+            progress_status = '{} of {} KiB downloaded\n{} of {} files downloaded'.format(
+                    int(bd / 1024), int(bt / 1024), fd, ft)
+            if show_dialogs:
+                dcc_progress_bar.set_progress_value(value=progress, status=progress_status)
+            if progress >= 100 or bd == bt:
+                break
+
+        dcc_progress_bar.end()
+
+        return valid_download
 
     # ==============================================================================================================
     # INTERNAL
     # ==============================================================================================================
+
+    def _post_update_paths(self, **kwargs):
+        """
+        Internal function that is called after update paths functionality is over. Can be override in custom DCC
+        plugins.
+        """
+
+        pass
 
     def _handle_open_message(self, file_path):
         """
@@ -520,7 +681,7 @@ class ArtellaPlugin(object):
         :return:
         """
 
-        return dcc.open_scene(filepath=file_path)
+        return dcc.open_scene(file_path=file_path, save=False)
 
     def _handle_import_message(self, file_path):
         """
@@ -546,20 +707,20 @@ class ArtellaPlugin(object):
     # ABSTRACT
     # ==============================================================================================================
 
-    @abstract
+    @utils.abstract
     def register_uri_resolver(self):
         """
         Function that registers DCC specific Artella URI resolver
-        This function must be implemented in those DCCs that support this feature
+        This function must be implemented in those dcc.that support this feature
         """
 
         pass
 
 
-@Singleton
-class ArtellaPluginSingleton(ArtellaPlugin, object):
+@utils.Singleton
+class ArtellaDccPluginSingleton(ArtellaDccPlugin, object):
     def __init__(self, artella_drive_client=None):
-        ArtellaPlugin.__init__(self, artella_drive_client=artella_drive_client)
+        ArtellaDccPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-artella.register_class('Plugin', ArtellaPluginSingleton)
+register.register_class('DccPlugin', ArtellaDccPluginSingleton)

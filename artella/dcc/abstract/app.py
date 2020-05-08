@@ -7,7 +7,7 @@ Module that contains DCC abstract application implementation
 
 from __future__ import print_function, division, absolute_import
 
-from artella import reroute
+from artella.core.dcc import reroute
 from artella.core.utils import abstract
 
 
@@ -58,6 +58,19 @@ def scene_name():
 
     :return: Full file path name of the current scene. If no file is opened, None is returned.
     :rtype: str or None
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def new_scene(force=True):
+    """
+    Creates a new scene inside DCC
+    :param force: True to skip saving of the current opened DCC scene; False otherwise.
+    :return: True if the new scene is created successfully; False otherwise.
+    :rtype: bool
     """
 
     pass
@@ -149,6 +162,18 @@ def pass_message_to_main_thread(fn, data):
     Executes given callable object in the DCC thread in the next idle event of that thread.
     :param fn: callable object to execute
     :param data: arguments to pass to the callable object
+    """
+
+    pass
+
+
+def clean_path(file_path):
+    """
+    Cleans given path so it can be properly used by current DCC
+
+    :param str file_path: file path we want to clean
+    :return: Cleaned version of the given file path
+    :rtype: str
     """
 
     pass

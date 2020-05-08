@@ -2,17 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Module that contains DCC abstract UI implementation
+Module that contains Standalone app UI implementation
 """
 
-from __future__ import print_function, division, absolute_import
-
-from artella.core.dcc import reroute
-from artella.core.utils import abstract
+from artella.core import qtutils
 
 
-@reroute
-@abstract
 def get_main_window():
     """
     Returns Qt object that references to the main DCC window we are working on
@@ -21,26 +16,29 @@ def get_main_window():
     :rtype: QMainWindow or QWidget or None
     """
 
-    pass
+    parent = qtutils.get_active_window()
+    if parent:
+        grand_parent = parent
+        while grand_parent is None:
+            parent = grand_parent
+            grand_parent = parent.parent()
+
+    return parent
 
 
-@reroute
-@abstract
 def show_info(title, message):
     """
-    Shows an information dialog that users need to accept/reject.
-
+    Shows a confirmation dialog that users need to accept/reject.
     :param str title: text that is displayed in the title bar of the dialog
     :param str message: text which is shown to the user telling them what operation they need to confirm
+
     :return: True if the user accepted the operation; False otherwise.
     :rtype: bool
     """
 
-    pass
+    return qtutils.show_info_message_box(title=title, text=message)
 
 
-@reroute
-@abstract
 def show_question(title, message, cancel=True):
     """
     Shows a question message box that can be used to show question text to users.
@@ -53,11 +51,9 @@ def show_question(title, message, cancel=True):
     :rtype: bool or None
     """
 
-    pass
+    return qtutils.show_question_message_box(title=title, text=message, cancel=cancel)
 
 
-@reroute
-@abstract
 def show_warning(title, message, print_message=False):
     """
     Shows a warning message box that can be used to show warning text to users.
@@ -67,11 +63,12 @@ def show_warning(title, message, print_message=False):
     :param bool print_message: whether or not print message in DCC output command window
     """
 
-    pass
+    if print_message:
+        print(print_message)
+
+    qtutils.show_warning_message_box(title=title, text=message)
 
 
-@reroute
-@abstract
 def show_error(title, message, print_message=False):
     """
     Shows an error message box that can be used to show critical text to users.
@@ -81,11 +78,12 @@ def show_error(title, message, print_message=False):
     :param bool print_message: whether or not print message in DCC output command window
     """
 
-    pass
+    if print_message:
+        print(print_message)
+
+    qtutils.show_error_message_box(title=title, text=message)
 
 
-@reroute
-@abstract
 def input_comment(title, label, text=''):
     """
     Shows a comment input dialog that users can use to input text.
@@ -98,4 +96,4 @@ def input_comment(title, label, text=''):
     :rtype: tuple(str, bool)
     """
 
-    pass
+    return qtutils.show_comment_input_dialog(title=title, label=label, text=text)

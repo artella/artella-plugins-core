@@ -12,7 +12,7 @@ try:
 except ImportError:
     from io import StringIO
 
-import artella
+from artella import logger
 from artella.core import utils
 
 QT_AVAILABLE = True
@@ -22,9 +22,7 @@ except ImportError as exc:
     QT_AVAILABLE = False
 
 if QT_AVAILABLE:
-
-    # Some DCCs do not include shiboken by , we check all possible locations
-
+    # Some DCCs do not include shiboken, we check all possible locations
     if __binding__ in ['PySide2', 'PyQt5']:
         try:
             import shiboken2 as shiboken
@@ -41,6 +39,11 @@ if QT_AVAILABLE:
                     from PySide import shiboken
                 except ImportError:
                     pass
+
+    # If QApplication does not exists we force its creation
+    app = QtWidgets.QApplication.instance()
+    if not app:
+        QtWidgets.QApplication([])
 
 if utils.is_python3():
     long = int
@@ -134,7 +137,7 @@ def wrapinstance(ptr, base=None):
         base = QtCore.QObject
         return shiboken.wrapinstance(long(ptr), base)
     else:
-        artella.log_error('Failed to wrap object {} ...'.format(ptr))
+        logger.log_error('Failed to wrap object {} ...'.format(ptr))
         return None
 
 
@@ -162,6 +165,30 @@ def to_qt_object(long_ptr, qobj=None):
     return wrapinstance(long_ptr, qobj)
 
 
+def get_active_window():
+    """
+    Returns current active window
+    :return:
+    """
+
+    if not QT_AVAILABLE:
+        return None
+
+    return QtWidgets.QApplication.activeWindow()
+
+
+def icon(icon_path):
+    """
+    Returns Qt icon instance
+
+    :param icon_path: Path were icon resources is located
+    :return: New instance of a Qt icon
+    :rtype: QtGui.QIcon
+    """
+
+    return QtGui.QIcon(icon_path)
+
+
 def show_string_input_dialog(title, label, text='', parent=None):
     """
     Shows a line string input dialog that users can use to input text.
@@ -176,7 +203,10 @@ def show_string_input_dialog(title, label, text='', parent=None):
     :rtype: tuple(str, bool)
     """
 
-    import artella.dcc as dcc
+    if not QT_AVAILABLE:
+        return '', False
+
+    from artella import dcc
 
     parent = parent if parent else dcc.get_main_window()
 
@@ -202,7 +232,10 @@ def show_comment_input_dialog(title, label, text='', parent=None):
     :rtype: tuple(str, bool)
     """
 
-    import artella.dcc as dcc
+    if not QT_AVAILABLE:
+        return '', False
+
+    from artella import dcc
 
     parent = parent if parent else dcc.get_main_window()
 
@@ -227,7 +260,10 @@ def show_info_message_box(title, text, parent=None):
         window will be used.
     """
 
-    import artella.dcc as dcc
+    if not QT_AVAILABLE:
+        return
+
+    from artella import dcc
 
     parent = parent if parent else dcc.get_main_window()
 
@@ -248,7 +284,10 @@ def show_question_message_box(title, text, cancel=True, parent=None):
     :rtype: bool or None
     """
 
-    import artella.dcc as dcc
+    if not QT_AVAILABLE:
+        return None
+
+    from artella import dcc
 
     parent = parent if parent else dcc.get_main_window()
 
@@ -283,11 +322,25 @@ def show_warning_message_box(title, text, parent=None):
         window will be used.
     """
 
-    import artella.dcc as dcc
+    if not QT_AVAILABLE:
+        return
+
+    from artella import dcc
+    from artella.core import resource
 
     parent = parent if parent else dcc.get_main_window()
+    window_icon = resource.icon('artella')
 
-    QtWidgets.QMessageBox.warning(parent, title, text)
+    message_box = QtWidgets.QMessageBox(parent)
+    message_box.setWindowTitle(title)
+    message_box.setWindowIcon(window_icon)
+    message_box.setIcon(message_box.Icon.Warning)
+    flags = message_box.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint | QtCore.Qt.WindowStaysOnTopHint
+    if text:
+        message_box.setText(text)
+    message_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+    message_box.setWindowFlags(flags)
+    message_box.exec_()
 
 
 def show_error_message_box(title, text, parent=None):
@@ -300,8 +353,22 @@ def show_error_message_box(title, text, parent=None):
         window will be used.
     """
 
-    import artella.dcc as dcc
+    if not QT_AVAILABLE:
+        return
+
+    from artella import dcc
+    from artella.core import resource
 
     parent = parent if parent else dcc.get_main_window()
+    window_icon = resource.icon('artella')
 
-    QtWidgets.QMessageBox.critical(parent, title, text)
+    message_box = QtWidgets.QMessageBox(parent)
+    message_box.setWindowTitle(title)
+    message_box.setWindowIcon(window_icon)
+    message_box.setIcon(message_box.Icon.Critical)
+    flags = message_box.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint | QtCore.Qt.WindowStaysOnTopHint
+    if text:
+        message_box.setText(text)
+    message_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+    message_box.setWindowFlags(flags)
+    message_box.exec_()

@@ -8,6 +8,7 @@ Module that contains Houdini DCC plugin specific implementation
 from __future__ import print_function, division, absolute_import
 
 import artella
+from artella import register
 import artella.plugin as plugin
 from artella.core.utils import Singleton
 
@@ -38,9 +39,9 @@ class ArtellaHoudiniPlugin(plugin.ArtellaPlugin, object):
 
         shelf_tools = [
             shelf.create_shelf_tool(
-                'save_to_cloud', 'Save to Cloud', 'import artella; artella.Plugin().make_new_version()'),
+                'save_to_cloud', 'Save to Cloud', 'import artella; artella.DccPlugin().make_new_version()'),
             shelf.create_shelf_tool(
-                'get_deps', 'Get Dependencies', 'import artella; artella.Plugin().get_dependencies()')
+                'get_deps', 'Get Dependencies', 'import artella; artella.DccPlugin().get_dependencies()')
         ]
 
         shelve.setTools(shelf_tools)
@@ -54,4 +55,4 @@ class ArtellaHoudiniPluginSingleton(ArtellaHoudiniPlugin, object):
         ArtellaHoudiniPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-artella.register_class('Plugin', ArtellaHoudiniPluginSingleton)
+register.register_class('Plugin', ArtellaHoudiniPluginSingleton)

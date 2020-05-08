@@ -10,7 +10,7 @@ from __future__ import print_function, division, absolute_import
 import hou
 from hou import shelves
 
-import artella
+from artella import logger
 
 
 def get_shelf(shelf_name):
@@ -197,7 +197,7 @@ def create_shelf_tool(tool_name, tool_label, tool_script, tool_type='python', ic
     elif tool_type == 'hscript':
         language = hou.scriptLanguage.HScript
     if language is None:
-        artella.log_warning(
+        logger.log_warning(
             'Impossible to create shelf tool {} because script language {} is not supported by Houdini'.format(
                 tool_name, tool_type))
         return None

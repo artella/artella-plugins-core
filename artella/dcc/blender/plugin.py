@@ -11,8 +11,9 @@ import traceback
 
 import bpy
 
-import artella
-import artella.plugin as plugin
+from artella import logger
+from artella import register
+from artella import plugin as plugin
 from artella.core.utils import Singleton
 
 
@@ -46,7 +47,7 @@ class ArtellaBlenderPlugin(plugin.ArtellaPlugin, object):
         try:
             addon.unregister()
         except Exception as exc:
-            artella.log_debug(
+            logger.log_debug(
                 'Something went wrong while registering Artella Blender addon: {} | {}'.format(
                     exc, traceback.format_exc()))
 
@@ -59,4 +60,4 @@ class ArtellaBlenderPluginSingleton(ArtellaBlenderPlugin, object):
         ArtellaBlenderPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-artella.register_class('Plugin', ArtellaBlenderPluginSingleton)
+register.register_class('Plugin', ArtellaBlenderPluginSingleton)

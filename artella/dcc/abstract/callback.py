@@ -5,14 +5,14 @@
 Module that contains DCC abstract callback implementation
 """
 
-import artella
-from artella import reroute
+from artella import register
+from artella.core.dcc import reroute
 from artella.core.utils import abstract
 
 
 class AbstractCallback(object):
     """
-    Class that defines basic callback interface functions
+    Class that defines basic callback abstract functions
     """
 
     @classmethod
@@ -102,4 +102,4 @@ class Callbacks(object):
         pass
 
 
-artella.register_class('Callbacks', Callbacks)
+register.register_class('Callbacks', Callbacks)
