@@ -444,6 +444,11 @@ class ArtellaDriveClient(object):
         local_root = self.get_local_root()
         local_project_names = (self.get_local_projects() or dict()).keys()
 
+        for old_alr in consts.OLD_LOCAL_ROOTS:
+            old_alr_str = '${}'.format(old_alr)
+            if path.startswith(old_alr_str):
+                path = utils.clean_path(path.replace(old_alr, local_root))
+
         path_split = path.split('/')
         total_chars = 0
         for split in path_split:
@@ -484,12 +489,11 @@ class ArtellaDriveClient(object):
         path_to_convert = file_path
         if not os.path.isabs(file_path):
             path_to_convert = self.relative_path_to_absolute_path(file_path)
-        path_to_convert = utils.clean_path(path_to_convert)
+        translated_path = utils.clean_path(self.translate_path(path_to_convert))
 
-        if not path_to_convert.startswith(local_root):
-            return path_to_convert
-
-        converted_path = path_to_convert.replace(local_root, '${}'.format(consts.ALR))
+        converted_path = translated_path
+        if translated_path.startswith(local_root):
+            converted_path = translated_path.replace(local_root, '${}'.format(consts.ALR))
 
         return converted_path
     
