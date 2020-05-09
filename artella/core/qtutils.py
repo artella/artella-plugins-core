@@ -12,6 +12,7 @@ try:
 except ImportError:
     from io import StringIO
 
+import artella
 from artella import logger
 from artella.core import utils
 
@@ -44,6 +45,8 @@ if QT_AVAILABLE:
     app = QtWidgets.QApplication.instance()
     if not app:
         QtWidgets.QApplication([])
+
+DEFAULT_DPI = 96
 
 if utils.is_python3():
     long = int
@@ -189,6 +192,18 @@ def icon(icon_path):
     return QtGui.QIcon(icon_path)
 
 
+def pixmap(pixmap_path):
+    """
+    Returns Qt pixmap instance
+
+    :param pixmap_path: Path were icon resources is located
+    :return: New instance of a Qt pixmap
+    :rtype: QtGui.QPixmap
+    """
+
+    return QtGui.QPixmap(pixmap_path)
+
+
 def show_string_input_dialog(title, label, text='', parent=None):
     """
     Shows a line string input dialog that users can use to input text.
@@ -326,10 +341,9 @@ def show_warning_message_box(title, text, parent=None):
         return
 
     from artella import dcc
-    from artella.core import resource
 
     parent = parent if parent else dcc.get_main_window()
-    window_icon = resource.icon('artella')
+    window_icon = artella.ResourcesMgr().icon('artella')
 
     message_box = QtWidgets.QMessageBox(parent)
     message_box.setWindowTitle(title)
@@ -357,10 +371,9 @@ def show_error_message_box(title, text, parent=None):
         return
 
     from artella import dcc
-    from artella.core import resource
 
     parent = parent if parent else dcc.get_main_window()
-    window_icon = resource.icon('artella')
+    window_icon = artella.ResourcesMgr().icon('artella')
 
     message_box = QtWidgets.QMessageBox(parent)
     message_box.setWindowTitle(title)
@@ -372,3 +385,26 @@ def show_error_message_box(title, text, parent=None):
     message_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
     message_box.setWindowFlags(flags)
     message_box.exec_()
+
+
+def dpi_multiplier():
+    """
+    Returns current application DPI multiplier
+
+    :return: float
+    """
+
+    return max(1, float(QtWidgets.QApplication.desktop().logicalDpiY()) / float(DEFAULT_DPI))
+
+
+def dpi_scale(value):
+    """
+    Resizes by value based on current DPI
+
+    :param int value: value default 2k size in pixels
+    :return: size in pixels now DPI monitor is (4k 2k etc)
+    :rtype: int
+    """
+
+    mult = dpi_multiplier()
+    return value * mult
