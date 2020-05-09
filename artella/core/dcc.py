@@ -92,8 +92,8 @@ def reroute(fn):
         if dcc_reroute_fn_path not in DCC_REROUTE_CACHE:
             try:
                 dcc_reroute_module = import_module(dcc_reroute_path)
-            except ImportError:
-                raise NotImplementedError('{} | Function {} not implemented!'.format(dcc, dcc_reroute_fn_path))
+            except ImportError as exc:
+                raise NotImplementedError('{} | Function {} not implemented! {}'.format(dcc, dcc_reroute_fn_path, exc))
             except Exception as exc:
                 raise exc
 

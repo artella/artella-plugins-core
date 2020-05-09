@@ -57,11 +57,17 @@ class ArtellaPlugin(object):
 
         plugin_menu = self._config_dict.get('menu')
         plugin_package = self._config_dict.get('package', 'Artella')
+        plugin_dccs = self._config_dict.get('dcc', list())
 
-        if plugin_menu and 'label' in plugin_menu:
-            menu_label = plugin_menu['label']
-            menu_command = plugin_menu['command']
-            dcc.add_menu_item(menu_label, menu_command, main_menu)
+        can_load_plugin = True
+        if plugin_dccs:
+            can_load_plugin = dcc.name() in plugin_dccs
+
+        if can_load_plugin:
+            if plugin_menu and 'label' in plugin_menu:
+                menu_label = plugin_menu['label']
+                menu_command = plugin_menu['command']
+                dcc.add_menu_item(menu_label, menu_command, main_menu)
 
         self._loaded = True
 
@@ -256,7 +262,6 @@ class ArtellaPluginsManager(object):
                 return
 
             if plugin_path not in sys.path:
-                print('Adding: {}'.format(plugin_path))
                 sys.path.append(plugin_path)
 
             self._plugin_paths.append(plugin_path)
@@ -282,7 +287,6 @@ class ArtellaPluginsManager(object):
                 clean_path = utils.clean_path(root)
                 found_paths[clean_path] = os.path.join(root, consts.ARTELLA_PLUGIN_CONFIG)
                 if clean_path not in sys.path:
-                    print('Adding: {}'.format(clean_path))
                     sys.path.append(clean_path)
 
         if not found_paths:
