@@ -9,32 +9,108 @@ from __future__ import print_function, division, absolute_import
 
 import os
 
-import artella
-from artella.core import qtutils
+from artella import register
+from artella.core import utils, qtutils
+
+if qtutils.QT_AVAILABLE:
+    from artella.externals.Qt import QtGui
 
 
-def get_resources_path():
-    """
-    Returns path where Artella resources are located
+class ResourcesManager(object):
+    def __init__(self):
+        super(ResourcesManager, self).__init__()
 
-    :return: Path where Artella resources are located
-    :rtype: str
-    """
+        self._resources_paths = list()
+        self._resources_cache = {
+            'icons': {}, 'pixmaps': {}
+        }
 
-    return os.path.join(os.path.dirname(os.path.abspath(artella.__file__)), 'resources')
+    def register_resources_path(self, resources_path):
+        """
+        Registers a path where resources will be searched
+        :param str resources_path: Path to search resources in
+        """
+
+        if not resources_path or not os.path.isdir(resources_path):
+            return
+
+        resources_path = utils.clean_path(resources_path)
+        if resources_path in self._resources_paths:
+            return
+
+        self._resources_paths.append(resources_path)
+
+    def icon(self, name, extension='png'):
+        """
+        Returns Artella icon
+        :param name:
+        :param extension:
+        :return: QIcon
+        """
+
+        if not qtutils.QT_AVAILABLE:
+            return None
+
+        if not self._resources_paths:
+            return QtGui.QIcon()
+
+        extension = extension if extension else 'png'
+        if not extension.startswith('.'):
+            extension = '.{}'.format(extension)
+
+        file_name = '{}{}'.format(name, extension)
+        if file_name in self._resources_cache['icons']:
+            return self._resources_cache['icons'][file_name]
+
+        for resource_path in self._resources_paths:
+            for root, dirs, files in os.walk(resource_path):
+                for path in files:
+                    path_name, path_ext = os.path.splitext(path)
+                    if path_name == name and path_ext == extension:
+                        icon_path = os.path.join(root, path)
+                        new_icon = qtutils.icon(icon_path)
+                        if not new_icon.isNull():
+                            self._resources_cache['icons'][file_name] = new_icon
+                        return new_icon
+
+    def pixmap(self, name, extension='png'):
+        """
+        Returns Artella pixmap resource
+        :param name:
+        :param extension:
+        :return:
+        """
+
+        if not qtutils.QT_AVAILABLE:
+            return None
+
+        if not self._resources_paths:
+            return QtGui.QPixmap()
+
+        extension = extension if extension else 'png'
+        if not extension.startswith('.'):
+            extension = '.{}'.format(extension)
+
+        file_name = '{}{}'.format(name, extension)
+        if file_name in self._resources_cache['pixmaps']:
+            return self._resources_cache['pixmaps'][file_name]
+
+        for resource_path in self._resources_paths:
+            for root, dirs, files in os.walk(resource_path):
+                for path in files:
+                    path_name, path_ext = os.path.splitext(path)
+                    if path_name == name and path_ext == extension:
+                        icon_path = os.path.join(root, path)
+                        new_pixmap = qtutils.pixmap(icon_path)
+                        if not new_pixmap.isNull():
+                            self._resources_cache['pixmaps'][file_name] = new_pixmap
+                        return new_pixmap
 
 
-def icon(name, extension='png'):
-    """
-    Returns Artella icon
-    :return: QIcon
-    """
+@utils.Singleton
+class ArtellaResourcesManagerSingleton(ResourcesManager, object):
+    def __init__(self):
+        ResourcesManager.__init__(self)
 
-    extension = extension if extension else 'png'
-    if not extension.startswith('.'):
-        extension = '.{}'.format(extension)
 
-    resources_path = get_resources_path()
-    icon_path = os.path.join(resources_path, 'icons', '{}{}'.format(name, extension))
-
-    return qtutils.icon(icon_path)
+register.register_class('ResourcesMgr', ArtellaResourcesManagerSingleton)
