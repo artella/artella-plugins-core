@@ -9,6 +9,7 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import string
+import platform
 import traceback
 
 import maya.cmds as cmds
@@ -38,7 +39,7 @@ def version():
     :rtype: int
     """
 
-    return (int(cmds.about(version=True)),)
+    return int(cmds.about(version=True))
 
 
 def extensions():
@@ -217,14 +218,24 @@ def supports_uri_scheme():
     return True
 
 
-def pass_message_to_main_thread(fn, data):
+def pass_message_to_main_thread_fn():
     """
-    Executes given callable object in the DCC thread in the next idle event of that thread.
-    :param fn: callable object to execute
-    :param data: arguments to pass to the callable object
+    Returns function used by DCC to execute a function in DCC main thread in the next idle event of that thread.
+
+    :return If DCC API supports it, returns function to call a function in main thread from other thread
     """
 
-    utils.executeInMainThreadWithResult(fn, data)
+    return utils.executeInMainThreadWithResult
+
+
+def is_batch():
+    """
+    Returns whether or not current DCC is being executed in batch mode (no UI)
+    :return: True if current DCC session is being executed in batch mode; False otherwise.
+    :rtype: bool
+    """
+
+    return cmds.about(batch=True)
 
 
 def clean_path(file_path):
@@ -237,3 +248,47 @@ def clean_path(file_path):
     """
 
     return cmds.encodeString(file_path)
+
+
+def get_installation_paths(versions=None):
+    """
+    Returns installation path of the given versions of current DCC
+
+    :param list(int) versions: list of versions to find installation paths of. If not given, current DCC version
+        installation path will be returned
+    :return: Dictionary mapping given versions with installation paths
+    :rtype: dict(str, str)
+    """
+
+    if versions is None:
+        versions = [version()]
+
+    installation_paths = dict()
+
+    if platform.system().lower() =='windows':
+        try:
+            for maya_version in versions:
+                from _winreg import HKEY_LOCAL_MACHINE, ConnectRegistry, OpenKey, QueryValueEx
+                a_reg = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
+                a_key = OpenKey(a_reg, r"SOFTWARE\Autodesk\Maya\{}\Setup\InstallPath".format(maya_version))
+                value = QueryValueEx(a_key, 'MAYA_INSTALL_LOCATION')
+                maya_location = value[0]
+                installation_paths['{}'.format(maya_version)] = maya_location
+        except Exception:
+            for maya_version in versions:
+                path = 'C:/Program Files/Autodesk/Maya{}'.format(maya_version)
+                if os.path.exists(path):
+                    maya_location = path
+                    installation_paths['{}'.format(maya_version)] = maya_location
+
+    return installation_paths
+
+
+def execute_deferred(fn):
+    """
+    Executes given function in deferred mode (once DCC UI has been loaded)
+    :param callable fn: Function to execute in deferred mode
+    :return:
+    """
+
+    utils.executeDeferred(fn)
