@@ -120,14 +120,14 @@ def supports_uri_scheme():
     return True
 
 
-def pass_message_to_main_thread(fn, data):
+def pass_message_to_main_thread_fn():
     """
-    Executes given callable object in the DCC thread in the next idle event of that thread.
-    :param fn: callable object to execute
-    :param data: arguments to pass to the callable object
+    Returns function used by DCC to execute a function in DCC main thread in the next idle event of that thread.
+
+    :return If DCC API supports it, returns function to call a function in main thread from other thread
     """
 
-    return fn(data)
+    return None
 
 
 def clean_path(file_path):

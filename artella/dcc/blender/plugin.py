@@ -60,4 +60,4 @@ class ArtellaBlenderPluginSingleton(ArtellaBlenderPlugin, object):
         ArtellaBlenderPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-register.register_class('Plugin', ArtellaBlenderPluginSingleton)
+register.register_class('DccPlugin', ArtellaBlenderPluginSingleton)
