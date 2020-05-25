@@ -9,32 +9,26 @@ from __future__ import print_function, division, absolute_import
 
 import artella
 from artella import register
-import artella.dcc as dcc
-import artella.plugin as plugin
+from artella.core import dccplugin, callback
 from artella.core.utils import Singleton
 
 
-class ArtellaMaxPlugin(plugin.ArtellaPlugin, object):
+class ArtellaMaxPlugin(dccplugin.ArtellaDccPlugin, object):
     def __init__(self, artella_drive_client):
         super(ArtellaMaxPlugin, self).__init__(artella_drive_client=artella_drive_client)
 
-    def create_menus(self):
-        """
-        Setup DCC Artella menu.
-        If the menu already exists, it will be deleted and recreated.
+    def init(self):
+        super(ArtellaMaxPlugin, self).init()
 
-        :return: True if the menu was created successfully; False otherwise
-        :rtype: bool
-        """
+        # Register 3ds Max specific callbacks
+        callback.register(artella.Callbacks.ShutdownCallback, self._on_close)
 
-        if dccs.check_menu_exists(self.MENU_NAME):
-            dccs.remove_menu(self.MENU_NAME)
+    def _on_close(self, *args):
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return
 
-        menu_items = [
-            {'name': 'Save to Cloud', 'command': 'import artella; artella.DccPlugin().make_new_version()'},
-            {'name': 'Get Dependencies', 'command': 'import artella; artella.DccPlugin().get_dependencies()'}
-        ]
-        dccs.add_menu(self.MENU_NAME, items=menu_items)
+        artella_drive_client.artella_drive_disconnect()
 
 
 @Singleton
@@ -43,4 +37,4 @@ class ArtellaMaxPluginSingleton(ArtellaMaxPlugin, object):
         ArtellaMaxPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-register.register_class('Plugin', ArtellaMaxPluginSingleton)
+register.register_class('DccPlugin', ArtellaMaxPluginSingleton)

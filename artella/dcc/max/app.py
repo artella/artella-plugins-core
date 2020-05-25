@@ -56,6 +56,23 @@ def scene_name():
     return MaxPlus.FileManager.GetFileNameAndPath()
 
 
+def new_scene(force=True):
+    """
+    Creates a new scene inside DCC
+    :param force: True to skip saving of the current opened DCC scene; False otherwise.
+    :return: True if the new scene is created successfully; False otherwise.
+    :rtype: bool
+    """
+
+    if not force:
+        save_scene(force=force)
+        ACTION_TABLE_ID = 0
+        NEW_ACTION_ID = "16"
+        MaxPlus.Core.EvalMAXScript('actionMan.executeAction ' + str(ACTION_TABLE_ID) + ' "' + str(NEW_ACTION_ID) + '"')
+
+    MaxPlus.FileManager.Reset(noPrompt=force)
+
+
 def scene_is_modified():
     """
     Returns whether or not current opened DCC file has been modified by the user or not
@@ -67,6 +84,18 @@ def scene_is_modified():
     return MaxPlus.FileManager.IsSaveRequired()
 
 
+def open_scene(file_path, save=True):
+    """
+    Opens DCC scene file
+    :param str file_path: Absolute local file path we want to open in current DCC
+    :param bool save: Whether or not save current opened DCC scene file
+    :return: True if the save operation was successful; False otherwise
+    :rtype: bool
+    """
+
+    pass
+
+
 def save_scene(force=True, **kwargs):
     """
     Saves DCC scene file
@@ -75,9 +104,18 @@ def save_scene(force=True, **kwargs):
     :return:
     """
 
-    MaxPlus.FileManager.Save()
+    if force:
+        return MaxPlus.FileManager.Save()
+    else:
+        file_check_state = MaxPlus.FileManager.IsSaveRequired()
+        if file_check_state:
+            if file_check_state:
+                res = MaxPlus.Core.EvalMAXScript(
+                    'queryBox "Do you want to save your changes?" title: "3ds Max has been modified"').Get()
+                if res:
+                    return MaxPlus.FileManager.Save()
 
-    return True
+    return False
 
 
 def supports_uri_scheme():
@@ -88,3 +126,27 @@ def supports_uri_scheme():
     """
 
     return False
+
+
+def pass_message_to_main_thread_fn():
+    """
+    Returns function used by DCC to execute a function in DCC main thread in the next idle event of that thread.
+
+    :return If DCC API supports it, returns function to call a function in main thread from other thread
+    """
+
+    return None
+
+
+def clean_path(file_path):
+    """
+    Cleans given path so it can be properly used by current DCC
+
+    :param str file_path: file path we want to clean
+    :return: Cleaned version of the given file path
+    :rtype: str
+    """
+
+    from artella.core import utils
+
+    return utils.clean_path(file_path)
