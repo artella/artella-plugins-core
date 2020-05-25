@@ -1,3 +1,12 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Module that contains Artella Splash widget
+"""
+
+from __future__ import print_function, division, absolute_import
+
 import artella
 from artella import logger
 from artella.core import qtutils, utils
