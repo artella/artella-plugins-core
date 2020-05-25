@@ -12,7 +12,7 @@ from __future__ import print_function, division, absolute_import
 ALR = 'ART_LOCAL_ROOT'
 
 # Defines Local Environment Variables used in old Artella versions
-OLD_LOCAL_ROOTS = ['AM_LOCAL_ROOT']
+OLD_LOCAL_ROOTS = ['AM_LOCAL_ROOT', 'AM_LOCAL_STORAGE_TOP']
 
 # Defines Local Environment Variable that sets Artella External DCCs location
 # This is used to register custom DCC implementations
