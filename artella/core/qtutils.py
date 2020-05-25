@@ -7,6 +7,8 @@ Module that contains ArtellaDrive Qt related utils classes and functions
 
 from __future__ import print_function, division, absolute_import
 
+import os
+import string
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -46,10 +48,16 @@ if QT_AVAILABLE:
     if not app:
         QtWidgets.QApplication([])
 
+
 DEFAULT_DPI = 96
 
 if utils.is_python3():
     long = int
+
+
+class StyleTemplate(string.Template):
+    delimiter = '@'
+    idpattern = r'[_a-z][_a-z0-9]*'
 
 
 def is_pyqt():
@@ -180,28 +188,64 @@ def get_active_window():
     return QtWidgets.QApplication.activeWindow()
 
 
-def icon(icon_path):
+def icon(icon_path, color=None):
     """
     Returns Qt icon instance
 
-    :param icon_path: Path were icon resources is located
+    :param icon_path: Path were icon resource is located
+    :param color:
     :return: New instance of a Qt icon
     :rtype: QtGui.QIcon
     """
 
-    return QtGui.QIcon(icon_path)
+    icon_pixmap = pixmap(icon_path, color=color)
+    new_icon = QtGui.QIcon(icon_pixmap)
+
+    return new_icon
 
 
-def pixmap(pixmap_path):
+def pixmap(pixmap_path, color=None):
     """
     Returns Qt pixmap instance
 
-    :param pixmap_path: Path were icon resources is located
+    :param pixmap_path: Path were pixmap resource is located
+    :param color:
     :return: New instance of a Qt pixmap
     :rtype: QtGui.QPixmap
     """
 
-    return QtGui.QPixmap(pixmap_path)
+    if color and isinstance(color, str):
+        from artella.widgets import color as artella_color
+        color = artella_color.from_string(color)
+
+    new_pixmap = QtGui.QPixmap(pixmap_path)
+
+    if not new_pixmap.isNull() and color:
+        painter = QtGui.QPainter(new_pixmap)
+        painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceIn)
+        painter.setBrush(color)
+        painter.setPen(color)
+        painter.drawRect(new_pixmap.rect())
+        painter.end()
+
+    return new_pixmap
+
+
+def style(style_path):
+    """
+    Returns Qt style instance
+    :param style_path: Path where style resource is located
+    :return: str
+    """
+
+    loaded_style = ''
+    if not style_path or not os.path.isfile(style_path):
+        return loaded_style
+
+    with open(style_path, 'r') as f:
+        loaded_style = StyleTemplate(f.read())
+
+    return loaded_style
 
 
 def show_string_input_dialog(title, label, text='', parent=None):
