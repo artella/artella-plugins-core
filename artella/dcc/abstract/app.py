@@ -206,3 +206,15 @@ def get_installation_paths(versions=None):
     """
 
     pass
+
+
+@reroute
+@abstract
+def execute_deferred(fn):
+    """
+    Executes given function in deferred mode (once DCC UI has been loaded)
+    :param callable fn: Function to execute in deferred mode
+    :return:
+    """
+
+    pass
