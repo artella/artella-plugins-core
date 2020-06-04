@@ -139,12 +139,12 @@ class InfoSplashDialog(SplashDialog, object):
         super(InfoSplashDialog, self).setup_ui()
 
         self._progress_text = QtWidgets.QLabel('Wait please ...')
-        progress_txt_lyt = QtWidgets.QHBoxLayout()
-        progress_txt_lyt.addStretch()
-        progress_txt_lyt.addWidget(self._progress_text)
-        progress_txt_lyt.addStretch()
+        progress_text_layout = QtWidgets.QHBoxLayout()
+        progress_text_layout.addStretch()
+        progress_text_layout.addWidget(self._progress_text)
+        progress_text_layout.addStretch()
 
-        self._splash_layout.addLayout(progress_txt_lyt)
+        self._splash_layout.addLayout(progress_text_layout)
 
     def set_text(self, text):
         self._progress_text.setText(text)

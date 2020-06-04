@@ -22,7 +22,7 @@ class ResourcesManager(object):
 
         self._resources_paths = list()
         self._resources_cache = {
-            'icons': {}, 'pixmaps': {}, 'styles': {}
+            'icon': {}, 'pixmap': {}, 'style': {}
         }
 
     def register_resources_path(self, resources_path):
@@ -49,31 +49,16 @@ class ResourcesManager(object):
         :return: QIcon
         """
 
-        if not qtutils.QT_AVAILABLE:
-            return None
+        resource_type = 'icon'
 
-        if not self._resources_paths:
-            return QtGui.QIcon()
+        new_icon, resource_key = self._get_resource(resource_type, name=name, extension=extension, color=color)
+        if not new_icon:
+            return None if not qtutils.QT_AVAILABLE else QtGui.QIcon()
 
-        extension = extension if extension else 'png'
-        if not extension.startswith('.'):
-            extension = '.{}'.format(extension)
+        if not new_icon.isNull():
+            self._register_resource(resource_type, resource_key, new_icon)
 
-        file_name = '{}{}'.format(name, extension)
-        file_key = '{}{}'.format(file_name.lower(), color or '')
-        if file_key in self._resources_cache['icons']:
-            return self._resources_cache['icons'][file_key]
-
-        for resource_path in self._resources_paths:
-            for root, dirs, files in os.walk(resource_path):
-                for path in files:
-                    path_name, path_ext = os.path.splitext(path)
-                    if path_name == name and path_ext == extension:
-                        icon_path = os.path.join(root, path)
-                        new_icon = qtutils.icon(icon_path, color=color)
-                        if not new_icon.isNull():
-                            self._resources_cache['icons'][file_key] = new_icon
-                        return new_icon
+        return new_icon
 
     def pixmap(self, name, extension='png', color=None):
         """
@@ -84,31 +69,16 @@ class ResourcesManager(object):
         :return:
         """
 
-        if not qtutils.QT_AVAILABLE:
-            return None
+        resource_type = 'pixmap'
 
-        if not self._resources_paths:
-            return QtGui.QPixmap()
+        new_pixmap, resource_key = self._get_resource(resource_type, name=name, extension=extension, color=color)
+        if not new_pixmap:
+            return None if not qtutils.QT_AVAILABLE else QtGui.QPixmap()
 
-        extension = extension if extension else 'png'
-        if not extension.startswith('.'):
-            extension = '.{}'.format(extension)
+        if not new_pixmap.isNull():
+            self._register_resource(resource_type, resource_key, new_pixmap)
 
-        file_name = '{}{}'.format(name, extension)
-        file_key = '{}{}'.format(file_name.lower(), color or '')
-        if file_key in self._resources_cache['pixmaps']:
-            return self._resources_cache['pixmaps'][file_key]
-
-        for resource_path in self._resources_paths:
-            for root, dirs, files in os.walk(resource_path):
-                for path in files:
-                    path_name, path_ext = os.path.splitext(path)
-                    if path_name == name and path_ext == extension:
-                        pixmap_path = os.path.join(root, path)
-                        new_pixmap = qtutils.pixmap(pixmap_path, color=color)
-                        if not new_pixmap.isNull():
-                            self._resources_cache['pixmaps'][file_key] = new_pixmap
-                        return new_pixmap
+        return new_pixmap
 
     def style(self, name, extension='css'):
         """
@@ -118,30 +88,96 @@ class ResourcesManager(object):
         :return:
         """
 
-        if not qtutils.QT_AVAILABLE:
+        resource_type = 'style'
+
+        new_style, resource_key = self._get_resource('style', name=name, extension=extension)
+        if not new_style:
             return None
 
-        if not self._resources_paths:
+        self._register_resource(resource_type, resource_key, new_style)
+
+        return new_style
+
+    def _get_resource(self, resource_type, name, extension, **kwargs):
+        """
+        Internal function that returns a resource based on its type
+        :param resource_type:
+        :return: object
+        """
+
+        if not qtutils.QT_AVAILABLE or not self._resources_paths or resource_type not in self._resources_cache:
             return None
 
-        extension = extension if extension else 'css'
         if not extension.startswith('.'):
             extension = '.{}'.format(extension)
 
+        color = kwargs.get('color', '')
+
         file_name = '{}{}'.format(name, extension)
-        if file_name in self._resources_cache['styles']:
-            return self._resources_cache['styles'][file_name]
+        file_key = '{}{}'.format(file_name.lower(), color)
+        if file_key in self._resources_cache[resource_type]:
+            return self._resources_cache[resource_type][file_key], file_key
 
         for resource_path in self._resources_paths:
             for root, dirs, files in os.walk(resource_path):
                 for path in files:
                     path_name, path_ext = os.path.splitext(path)
                     if path_name == name and path_ext == extension:
-                        style_path = os.path.join(root, path)
-                        new_style = qtutils.style(style_path)
-                        if new_style:
-                            self._resources_cache['styles'][file_name] = new_style
-                        return new_style
+                        res_path = os.path.join(root, path)
+                        new_res = getattr(self, '_{}'.format(resource_type))(res_path, color=color)
+                        return new_res, file_key
+
+        return None, file_key
+
+    def _register_resource(self, resource_type, resource_key, resource):
+        """
+        Internal function used to register resources in its proper cache
+        :param resource_type: str
+        :param resource_key: str
+        :param resource: object
+        :return:
+        """
+
+        if resource_type not in self._resources_cache:
+            return
+
+        self._resources_cache[resource_type][resource_key] = resource
+
+    def _icon(self, icon_path, color=None, **kwargs):
+        """
+        Internal function returns an Artella icon resource
+        :param icon_path:
+        :param color:
+        :return: QIcon
+        """
+
+        new_icon = qtutils.icon(icon_path, color=color)
+
+        return new_icon
+
+    def _pixmap(self, pixmap_path, color=None, **kwargs):
+        """
+        Internal function returns an Artella pixmap resource
+        :param file_key: str
+        :param pixmap_path: str
+        :param color:
+        :return:
+        """
+
+        new_pixmap = qtutils.pixmap(pixmap_path, color=color)
+
+        return new_pixmap
+
+    def _style(self, style_path, **kwargs):
+        """
+        Internal function returns an Artella style resource
+        :param style_path: str
+        :return:
+        """
+
+        new_style = qtutils.style(style_path)
+
+        return new_style
 
 
 @utils.Singleton

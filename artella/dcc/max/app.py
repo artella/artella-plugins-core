@@ -109,11 +109,10 @@ def save_scene(force=True, **kwargs):
     else:
         file_check_state = MaxPlus.FileManager.IsSaveRequired()
         if file_check_state:
-            if file_check_state:
-                res = MaxPlus.Core.EvalMAXScript(
-                    'queryBox "Do you want to save your changes?" title: "3ds Max has been modified"').Get()
-                if res:
-                    return MaxPlus.FileManager.Save()
+            res = MaxPlus.Core.EvalMAXScript(
+                'queryBox "Do you want to save your changes?" title: "3ds Max has been modified"').Get()
+            if res:
+                return MaxPlus.FileManager.Save()
 
     return False
 
