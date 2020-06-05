@@ -8,6 +8,7 @@ Module that contains ArtellaDrive Python client implementation
 from __future__ import print_function, division, absolute_import
 
 import os
+import time
 import json
 import codecs
 import socket
@@ -28,7 +29,7 @@ except ImportError:
 
 import artella
 from artella import logger
-from artella.core import consts, utils, exceptions
+from artella.core import consts, qtutils, utils, exceptions
 
 
 class ArtellaDriveClient(object):
@@ -87,7 +88,8 @@ class ArtellaDriveClient(object):
         # We need to check this each time in case the local server got restarted
         auth_header = artella_client.update_auth_challenge()
         if not auth_header:
-            raise exceptions.ArtellaDriveNotAvailable()
+            logger.log_error('Local Artella Drive is not available. Please launch Artella Drive App.')
+            return None
 
         # Updates the list of available remotes
         artella_client.update_remotes_sessions()
@@ -144,13 +146,24 @@ class ArtellaDriveClient(object):
 
         return self._auth_header
 
-    def get_remote_sessions(self):
+    def has_remote_sessions(self):
+        """
+        Returns whether or not current Artella Drive Client has remote sessions available or not
+        :return: bool
+        """
+
+        return self._remote_sessions and len(self._remote_sessions) > 0
+
+    def get_remote_sessions(self, update=False):
         """
         Returns a list with all available remote sessions
 
         :return: List of cached remote sessions in current Artella Drive Client
         :rtype: list(str)
         """
+
+        if not self._remote_sessions and update:
+            self.update_remotes_sessions()
 
         return self._remote_sessions
 
@@ -162,20 +175,27 @@ class ArtellaDriveClient(object):
         :rtype: list(str)
         """
 
+        from artella import dcc
+
         utils.clear_list(self._remote_sessions)
 
         if not self.update_auth_challenge():
-            logger.log_error('Unable to authenticate to Artella Drive App.')
+            msg = 'Unable to authenticate to Artella Drive App.'
+            logger.log_error(msg)
+            dcc.show_error('Artella - Authentication error', msg)
             return
 
         rsp = self.ping()
         if 'error' in rsp:
-            raise exceptions.BadRemoteResponse(
-                'Attempting to retrieve remote sessions: "{}" '.format(rsp.get('error')))
+            msg = 'Attempting to retrieve remote sessions: "{}" '.format(rsp.get('error'))
+            logger.log_error(msg)
+            dcc.show_error('Artella - Bad remote response error', msg)
 
         self._remote_sessions = rsp.get('remote_sessions', list())
         if not self._remote_sessions:
-            raise exceptions.RemoteSessionsNotAvailable()
+            msg = 'No remote sessions available. Please visit your Project Drive in Artella Web App and try again!'
+            logger.log_error(msg)
+            dcc.show_error('Artella - Remote Sessions not available', msg)
 
         return self._remote_sessions
 
@@ -448,6 +468,7 @@ class ArtellaDriveClient(object):
             old_alr_str = '${}'.format(old_alr)
             if path.startswith(old_alr_str):
                 path = utils.clean_path(path.replace(old_alr, local_root))
+                path = path[1:] if path.startswith('$') else path
 
         path_split = path.split('/')
         total_chars = 0
@@ -623,7 +644,7 @@ class ArtellaDriveClient(object):
         }
         """
 
-        if not self.get_remote_sessions():
+        if not self.get_remote_sessions(update=True):
             logger.log_warning(
                 'No remote sessions available. Artella App Drive status call aborted.')
             return dict()
@@ -868,8 +889,10 @@ class ArtellaDriveClient(object):
         """
 
         status = _status or self.status(file_path, include_remote=True)
+        if not status:
+            return None
 
-        current_version = 0
+        current_version = -1
         for file_status in status:
             for file_uri_path, file_status_data in file_status.items():
                 if 'local_info' not in file_status_data or not file_status_data['local_info'] or \
@@ -1029,10 +1052,6 @@ class ArtellaDriveClient(object):
         Connects to the local user Artella Drive App via web socket so we can listen for realtime events
         :return:
         """
-
-        # TODO: Using this we completely stop Artella client thread if an exception is arised
-        # if self._running:
-        #     self.artella_drive_disconnect()
 
         server_address = (self._host, self._port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
