@@ -107,6 +107,21 @@ def is_referenced_node(node_name):
     return cmds.referenceQuery(node_name, isNodeReferenced=True)
 
 
+def is_reference_loaded(reference_node):
+    """
+    Returns whether or not current node is referenced or not
+
+    :param str reference_node: str, reference node
+    :return: True if the given node is referenced; False otherwise.
+    :rtype: bool
+    """
+
+    if not is_reference_node(reference_node):
+        return False
+
+    return cmds.referenceQuery(reference_node, isLoaded=True)
+
+
 def get_reference_file(reference_node, without_copy_number=True):
     """
     Returns the reference file associated with the given referenced object or reference node
@@ -158,6 +173,55 @@ def replace_reference(reference_node, reference_file_path):
     logger.log_debug('Replaced reference "{}" using file: "{}"'.format(reference_node, reference_file_path))
 
     return reference_file_path
+
+
+def unload_reference(reference_node):
+    """
+    Unloads the reference associated with the given reference node
+
+    :param reference_node: str, reference node to unload
+    """
+
+    if not is_reference_node(reference_node):
+        return False
+
+    is_loaded = cmds.file(referenceNode=reference_node, unloadReference=True)
+
+    # logger.log_debug('Unloaded reference "{}"! ("{}")'.format(reference_node, get_reference_file(reference_node)))
+
+    return is_loaded
+
+
+def load_reference(file_path, reference_name):
+    """
+    Loads a new reference with given name pointing to given path
+    :param str file_path:
+    :param str reference_name:
+    :return:
+    """
+
+    is_loaded = cmds.file(file_path, loadReference=reference_name)
+
+    logger.log_debug('Loaded reference "{}"! ("{}")'.format(reference_name, file_path))
+
+    return is_loaded
+
+
+def reload_reference(reference_node):
+    """
+    Reloads the reference associated with the given reference node
+
+    :param str reference_node:
+    """
+
+    if not is_reference_node(reference_node):
+        return False
+
+    is_loaded = cmds.file(referenceNode=reference_node, loadReference=True)
+
+    logger.log_debug('Reloaded reference "{}"! ("{}")'.format(reference_node, get_reference_file(reference_node)))
+
+    return is_loaded
 
 
 def reload_textures():

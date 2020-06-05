@@ -16,7 +16,6 @@ from artella import logger
 ARTELLA_CALLBACKS_CACHE = dict()
 
 
-
 def initialize_callbacks():
 
     global ARTELLA_CALLBACKS_CACHE

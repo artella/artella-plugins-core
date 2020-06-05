@@ -55,4 +55,4 @@ class ArtellaHoudiniPluginSingleton(ArtellaHoudiniPlugin, object):
         ArtellaHoudiniPlugin.__init__(self, artella_drive_client=artella_drive_client)
 
 
-register.register_class('Plugin', ArtellaHoudiniPluginSingleton)
+register.register_class('DccPlugin', ArtellaHoudiniPluginSingleton)

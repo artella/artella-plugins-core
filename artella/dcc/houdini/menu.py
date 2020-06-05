@@ -70,7 +70,7 @@ def remove_menu(menu_name):
     return False
 
 
-def add_menu_item(menu_item_name, menu_item_command, parent_menu):
+def add_menu_item(menu_item_name, menu_item_command, parent_menu, **kwargs):
     """
     Adds a new menu item to the given parent menu. When the item is clicked by the user the given command will be+
     executed

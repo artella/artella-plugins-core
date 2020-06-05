@@ -10,6 +10,7 @@ from __future__ import print_function, division, absolute_import
 import os
 import sys
 import imp
+import time
 import json
 import fnmatch
 import inspect
@@ -281,6 +282,27 @@ def read_json(filename):
 
     return data
 
+
+def get_percent(value, minimum, maximum):
+    if minimum == maximum:
+        return 100
+    return max(0, min(100, (value - minimum) * 100 / (maximum - minimum)))
+
+
+def timestamp(f):
+    """
+    Function decorator that gets the elapsed time with a more descriptive output
+
+    :param f: fn, function
+    """
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        res = f(*args, **kwargs)
+        logger.log_warning('<{}> Elapsed time : {}'.format(f.func_name, time.time() - start_time))
+        return res
+    return wrapper
 
 
 def abstract(fn):

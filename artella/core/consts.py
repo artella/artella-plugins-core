@@ -11,6 +11,9 @@ from __future__ import print_function, division, absolute_import
 # This is used as fallback when ArtellaApp/URI is not available
 ALR = 'ART_LOCAL_ROOT'
 
+# Defines Local Environment Variables used in old Artella versions
+OLD_LOCAL_ROOTS = ['AM_LOCAL_ROOT', 'AM_LOCAL_STORAGE_TOP']
+
 # Defines Local Environment Variable that sets Artella External DCCs location
 # This is used to register custom DCC implementations
 AED = 'ARTELLA_EXTERNAL_DCCS'

@@ -1,0 +1,161 @@
+/*
+ --------------------------------------------------------------------------
+ Artella CSS Style
+ --------------------------------------------------------------------------
+*/
+
+*
+{
+    font-family: @font_family;
+    color: @main_text_color;
+    background-color: @background_color;
+    font-size: @font_size_base@unit;
+    selection-color: @text_color_inverse;
+    selection-background-color: @main_color;
+}
+
+/*
+ArtellaImage
+*/
+
+ArtellaImage
+{
+    background-color: transparent;
+}
+
+/* 
+ArtellaLabel
+*/
+
+ArtellaLabel
+{
+    padding: 2px;
+    background-color: transparent;
+    font-size: @font_size_base@unit;
+    color: @main_text_color;
+    font-weight: 400;
+}
+
+ArtellaLabel[artella_level="1"]
+{
+    font-size: @h1_size@unit;
+    font-weight: 500;
+    color: @title_color;
+}
+
+ArtellaLabel[artella_level="2"]
+{
+    font-size: @h2_size@unit;
+    font-weight: 500;
+    color: @title_color;
+}
+
+ArtellaLabel[artella_level="3"]
+{
+    font-size: @h3_size@unit;
+    font-weight: 500;
+    color: @title_color;
+}
+
+ArtellaLabel[artella_level="4"]
+{
+    font-size: @h4_size@unit;
+    font-weight: 500;
+    color: @title_color;
+}
+
+ArtellaLabel[artella_underline=true]
+{
+    text-decoration: underline;
+}
+
+ArtellaLabel[artella_delete=true]
+{
+    text-decoration: line-through;
+}
+
+ArtellaLabel[artella_strong=true]
+{
+    font-weight: bold;
+}
+
+ArtellaLabel[artella_code=true]
+{
+    background-color: @background_out_color;
+    border: 1px solid @border_color;
+}
+
+ArtellaLabel[artella_mark=true]
+{
+    background-color: @warning_1;
+}
+
+ArtellaLabel[artella_type=danger]
+{
+    color: @error_6;
+}
+ArtellaLabel[artella_type=warning]
+{
+    color: @warning_6;
+}
+
+ArtellaLabel[artella_type=secondary]
+{
+    color: @secondary_text_color;
+}
+
+ArtellaLabel:disabled
+{
+    color:@disable_color;
+}
+
+/*
+ArtellaToolButton
+*/
+
+ArtellaToolButton
+{
+    border: none;
+    padding: 0;
+    background-color: transparent;
+}
+
+ArtellaToolButton:hover
+{
+    color: @main_color_5;
+}
+
+ArtellaToolButton:pressed
+{
+    color: @main_color_7;
+}
+
+ArtellaToolButton:disabled
+{
+    background-color: @disable_color;
+}
+
+/*
+SnackBarMessage
+*/
+
+SnackBarMessage QFrame#mainFrame
+{
+    background-color: @background_color;
+}
+
+SnackBarMessage QFrame#mainFrame
+{
+    border-radius: 10px;
+}
+
+/*
+ArtellaDivider
+*/
+
+ArtellaDivider
+{
+    border-radius: 0px;
+    color: red;
+    background-color: red;
+}

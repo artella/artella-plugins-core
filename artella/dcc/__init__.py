@@ -10,6 +10,8 @@ from __future__ import print_function, division, absolute_import
 
 from artella.dcc.abstract.app import *
 from artella.dcc.abstract.ui import *
+from artella.dcc.abstract.dialog import *
+from artella.dcc.abstract.window import *
 from artella.dcc.abstract.menu import *
 from artella.dcc.abstract.callback import *
 from artella.dcc.abstract.parser import *
@@ -36,6 +38,7 @@ class DccCallbacks(object):
     Class that contains all callbacks that can be supported by DCCs
     """
 
+    Shutdown = ('Shutdown', {'type': 'simple'})
     BeforeOpenCheck = ('BeforeOpenCheck', {'type': 'simple'})
     AfterOpen = ('AfterOpen', {'type': 'simple'})
     SceneBeforeSave = ('SceneBeforeSave', {'type': 'simple'})

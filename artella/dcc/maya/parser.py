@@ -13,8 +13,11 @@ import artella
 from artella import dcc
 from artella import logger
 from artella import register
-from artella.core import utils
+from artella.core import utils, qtutils, splash
 from artella.dcc.abstract import parser
+
+if qtutils.QT_AVAILABLE:
+    from artella.externals.Qt import QtCore, QtWidgets
 
 MAYA_AVAILBLE = True
 try:
@@ -106,22 +109,27 @@ class MayaSceneParser(parser.AbstractSceneParser, object):
 
         valid_update = True
 
+        file_path_editors = dict()
         for dir_name in dirs:
-            file_path_editor = cmds.filePathEditor(query=True, listFiles=dir_name, withAttribute=True)
-            if not file_path_editor:
+            try:
+                file_path_editor = cmds.filePathEditor(query=True, listFiles=dir_name, withAttribute=True)
+            except Exception as exc:
+                logger.log_error(
+                    'Querying scene files in dir "{}" looking for dependent files: {}'.format(dir_name, exc))
                 return
+            if not file_path_editor:
+                continue
+            file_path_editors[dir_name] = file_path_editor
+
+        for dir_name, file_path_editor in file_path_editors.items():
             i = 0
             while i < len(file_path_editor):
                 file_name = file_path_editor[i]
                 node_attr_name = file_path_editor[i + 1]
                 i += 2
-
                 maya_dir = artella.DccPlugin().translate_path(dir_name)
                 maya_file_path = utils.clean_path(os.path.join(dir_name, file_name))
                 translated_path = utils.clean_path(os.path.join(maya_dir, file_name))
-                if maya_file_path == translated_path:
-                    continue
-
                 converted_path = artella.DccPlugin().convert_path(translated_path)
 
                 logger.log_info(
@@ -135,14 +143,36 @@ class MayaSceneParser(parser.AbstractSceneParser, object):
     def _update_attr_path(self, node_attr_name, file_path):
 
         node_name = node_attr_name.split('.')[0]
-        valid_update = maya_utils.replace_reference(node_name, file_path)
-        if not valid_update:
+
+        if maya_utils.is_reference_node(node_name):
+            is_loaded = maya_utils.is_reference_loaded(node_name)
+            valid_update = True
+            if is_loaded:
+                try:
+                    maya_utils.unload_reference(node_name)
+                except RuntimeError as exc:
+                    logger.log_error(
+                        'Encountered an error while attempting to unload reference file: "{}" | {}'.format(
+                            node_name, exc))
+                    valid_update = False
+            try:
+                maya_utils.load_reference(file_path, node_name)
+            except RuntimeError as exc:
+                logger.log_error(
+                    'Encountered an error while attempting to load reference file "{}" '
+                    'using the updated file path: "{}" | {}'.format(node_name, file_path, exc))
+                valid_update = False
+        else:
             if '.' not in node_attr_name:
                 logger.log_warning(
                     'Unable to identify attribute of {} for file value {}'.format(node_attr_name, file_path))
                 return False
 
-            attr_value = cmds.getAttr(node_attr_name, sl=True)
+            try:
+                attr_value = cmds.getAttr(node_attr_name, sl=True)
+            except Exception as exc:
+                logger.log_warning('Unable to query attributes for "{}" | {}'.format(node_attr_name, exc))
+                return False
 
             if isinstance(attr_value, list):
                 valid_update = True
@@ -282,7 +312,13 @@ class MayaSceneParser(parser.AbstractSceneParser, object):
         Class that defines Maya scene parser for Maya ASCII files
         """
 
-        def parse(self, file_object):
+        def __init__(self):
+            super(MayaSceneParser.MayaAsciiParser, self).__init__()
+
+            self._progress_splash = None
+
+        @utils.timestamp
+        def parse(self, file_object, show_dialogs=True):
             """
             Parses all the contents of the given file path looking for file paths
 
@@ -291,9 +327,26 @@ class MayaSceneParser(parser.AbstractSceneParser, object):
             """
 
             self._stream = file_object
+            file_name = os.path.basename(self._stream.name)
 
+            if show_dialogs and qtutils.QT_AVAILABLE:
+                self._progress_splash = splash.ProgressSplashDialog()
+                self._progress_splash.set_progress_text('Please wait ...'.format(file_name))
+                self._progress_splash.start()
+
+            value = 0
             while self._parse_next_command():
-                pass
+                value += 1
+                if value > 250:
+                    next_index = self._progress_splash.get_progress_value() + 1
+                    if next_index > 100:
+                        next_index = 1
+                    self._progress_splash.set_progress_value(next_index, 'Parsing file: {}'.format(file_name))
+                    QtWidgets.QApplication.instance().processEvents()
+                    value = 0
+
+            if self._progress_splash:
+                self._progress_splash.close()
 
         def _parse_next_command(self):
             """

@@ -157,16 +157,30 @@ def supports_uri_scheme():
 
 @reroute
 @abstract
-def pass_message_to_main_thread(fn, data):
+def pass_message_to_main_thread_fn():
     """
-    Executes given callable object in the DCC thread in the next idle event of that thread.
-    :param fn: callable object to execute
-    :param data: arguments to pass to the callable object
+    Returns function used by DCC to execute a function in DCC main thread in the next idle event of that thread.
+
+    :return If DCC API supports it, returns function to call a function in main thread from other thread
     """
 
     pass
 
 
+@reroute
+@abstract
+def is_batch():
+    """
+    Returns whether or not current DCC is being executed in batch mode (no UI)
+    :return: True if current DCC session is being executed in batch mode; False otherwise.
+    :rtype: bool
+    """
+
+    pass
+
+
+@reroute
+@abstract
 def clean_path(file_path):
     """
     Cleans given path so it can be properly used by current DCC
@@ -174,6 +188,33 @@ def clean_path(file_path):
     :param str file_path: file path we want to clean
     :return: Cleaned version of the given file path
     :rtype: str
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def get_installation_paths(versions=None):
+    """
+    Returns installation path of the given versions of current DCC
+
+    :param list(int) versions: list of versions to find installation paths of. If not given, current DCC version
+        installation path will be returned
+    :return: List of installation paths of the given DCC versions
+    :rtype: list(str)
+    """
+
+    pass
+
+
+@reroute
+@abstract
+def execute_deferred(fn):
+    """
+    Executes given function in deferred mode (once DCC UI has been loaded)
+    :param callable fn: Function to execute in deferred mode
+    :return:
     """
 
     pass

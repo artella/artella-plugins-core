@@ -7,9 +7,27 @@ Logger module for Artella
 
 from __future__ import print_function, division, absolute_import
 
-import logging
+import os
+import logging.config
 
-logging.basicConfig(filename='artella.log', level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
+artella_logger = None
+
+
+def create_logger():
+
+    global artella_logger
+    if artella_logger:
+        return artella_logger
+
+    logger_path = os.path.normpath(os.path.join(os.path.expanduser('~'), 'artella', 'logs'))
+    if not os.path.isdir(logger_path):
+        os.makedirs(logger_path)
+
+    logging.config.fileConfig(
+        os.path.normpath(os.path.join(os.path.dirname(__file__), 'logging.ini')), disable_existing_loggers=False)
+    artella_logger = logging.getLogger('artella')
+
+    return artella_logger
 
 
 def log_debug(msg):
@@ -19,7 +37,7 @@ def log_debug(msg):
     :param str msg: debug message to log
     """
 
-    logging.debug(msg)
+    artella_logger.debug(msg)
 
 
 def log_info(msg):
@@ -29,7 +47,7 @@ def log_info(msg):
     :param str msg: info message to log
     """
 
-    logging.info(msg)
+    artella_logger.info(msg)
 
 
 def log_warning(msg):
@@ -39,7 +57,7 @@ def log_warning(msg):
     :param str msg: warning message to log
     """
 
-    logging.warning(msg)
+    artella_logger.warning(msg)
 
 
 def log_error(msg):
@@ -49,7 +67,7 @@ def log_error(msg):
     :param str msg: error message to log
     """
 
-    logging.error(msg)
+    artella_logger.error(msg)
 
 
 def log_exception(msg):
@@ -59,4 +77,4 @@ def log_exception(msg):
     :param str msg: error message to log
     """
 
-    logging.error(msg, exc_info=True)
+    artella_logger.error(msg, exc_info=True)

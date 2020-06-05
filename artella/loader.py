@@ -10,6 +10,10 @@ from __future__ import print_function, division, absolute_import
 import os
 import sys
 
+import artella
+from artella import dcc
+from artella import logger
+
 
 def init(init_client=True, plugin_paths=None, extensions=None):
     """
@@ -21,14 +25,16 @@ def init(init_client=True, plugin_paths=None, extensions=None):
     :rtype: bool
     """
 
-    import artella
-    from artella import dcc
+    from artella import register
     from artella.core import dcc as core_dcc
-    from artella.core import client
-    from artella.core import plugin     # Import to force the creation of Plugins Manager
+    from artella.core import client, resource, plugin, qtutils
+    from artella.widgets import theme, color
 
     plugins_path = plugin_paths if plugin_paths is not None else list()
     extensions = extensions if extensions is not None else list()
+
+    # Create logger
+    logger.create_logger()
 
     # Make sure that Artella Drive client and DCC are cached during initialization
     core_dcc.current_dcc()
@@ -37,11 +43,26 @@ def init(init_client=True, plugin_paths=None, extensions=None):
     dcc_extensions = dcc.extensions()
     extensions.extend(dcc_extensions)
 
+    # Create Artella Drive Client
     artella_drive_client = client.ArtellaDriveClient.get(extensions=extensions) if init_client else None
+
+    # Initialize resources
+    resources_mgr = artella.ResourcesMgr()
+    resources_mgr.register_resources_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources'))
+
+    # Load Plugins
+    default_plugins_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plugins')
+    if default_plugins_path not in plugins_path:
+        plugins_path.append(default_plugins_path)
+    artella.PluginsMgr().register_paths(plugins_path)
+    artella.PluginsMgr().load_registered_plugins()
+
+    # Initialize Artella DCC plugin
     artella.DccPlugin(artella_drive_client).init()
 
-    artella.PluginsMgr().register_paths(plugin_paths)
-    artella.PluginsMgr().load_registered_plugins()
+    if qtutils.QT_AVAILABLE:
+        artella_theme = theme.ArtellaTheme(main_color=color.ArtellaColors.DEFAULT)
+        register.register_class('theme', artella_theme)
 
     return True
 
@@ -54,9 +75,11 @@ def shutdown():
     :rtype: bool
     """
 
-    import artella
     from artella.core import dcc
-    from artella.core import plugin     # Import to force the creation of Plugins Manager
+    from artella.core import plugin
+
+    # Create logger
+    logger.create_logger()
 
     # Make sure that Artella Drive client and DCC are cached during initialization
     dcc.current_dcc()
@@ -73,15 +96,15 @@ def _reload():
     Useful when working inside DCC envs.
     """
 
-    # Make sure that DCC and its related modules are imported before doing the reload
-    # current_dcc()
+    # Create logger
+    logger.create_logger()
 
     # We make sure that plugin is shutdown before doing reload
     shutdown()
 
     to_clean = [m for m in sys.modules.keys() if 'artella' in m]
     for t in to_clean:
-        os.sys.modules.pop(t)
+        del sys.modules[t]
 
     global CURRENT_DCC
     CURRENT_DCC = None

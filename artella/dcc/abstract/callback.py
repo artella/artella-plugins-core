@@ -59,6 +59,13 @@ class Callbacks(object):
     Class that contains all supported callback definitions
     """
 
+    class ShutdownCallback(AbstractCallback, object):
+        """
+        Callback that is called before DCC app is closed
+        """
+
+        pass
+
     class BeforeOpenCheckCallback(AbstractCallback, object):
         """
         Callback that is called before a file is opened
