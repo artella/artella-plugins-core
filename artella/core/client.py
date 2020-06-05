@@ -51,6 +51,7 @@ class ArtellaDriveClient(object):
         self._running = False           # Flag that is True while Artella Drive thread is running.
         self._exception = None          # Contains exception caused while Artella Drive is running.
         self._extensions = extensions   # Contains a list with all extensions managed by the client.
+        self._client_thread = None      # Contains Python client thread
 
     # ==============================================================================================================
     # PROPERTIES
@@ -1070,7 +1071,11 @@ class ArtellaDriveClient(object):
         return rsp
 
     def artella_drive_disconnect(self):
+        logger.log_debug('Disconnecting Artella Drive Client ...')
         self._running = False
+        if self._socket_buffer:
+            self._socket_buffer.close()
+            self._socket_buffer = None
 
     def artella_drive_listen(self):
         try:
@@ -1078,7 +1083,7 @@ class ArtellaDriveClient(object):
             if not self._socket_buffer:
                 logger.log_error('Socket to Artella Drive not connected.')
                 return
-            threading.Thread(target=self._pull_messages,).start()
+            self._client_thread = threading.Thread(target=self._pull_messages,).start()
         except Exception as exc:
             logger.log_exception('{} | {}'.format(exc, traceback.format_exc()))
 
@@ -1204,8 +1209,12 @@ class ArtellaDriveClient(object):
         while self._running:
             try:
                 if self._exception:
-                    self.artella_drive_connect()
                     self._exception = None
+                    self.artella_drive_disconnect()
+                    qtutils.show_error_message_box(
+                        'Artella Drive App - Error',
+                        'Error while getting message from Artella Drive App. Your Artella '
+                        'session has been aborted. Restart DCC to relaunch Artella Plugin')
                 msg = self._get_message()
                 logger.log_debug('Message received: {}'.format(msg))
                 artella.DccPlugin().pass_message(msg)
@@ -1213,7 +1222,16 @@ class ArtellaDriveClient(object):
                 logger.log_exception('{} | {}'.format(exc, traceback.format_exc()))
                 self._exception = exc
 
+        logger.log_debug('Stopping messages pull ...')
+
+        if self._client_thread:
+            logger.log_debug('Stopping Artella Drive Client thread ...')
+            time.sleep(1)
+            self._client_thread.join()
+
     def _get_message(self):
+        if not self._socket_buffer:
+            return {}
         op_code = ord(self._socket_buffer.get_char())
         v = ord(self._socket_buffer.get_char())
         if op_code != 129:
@@ -1245,7 +1263,10 @@ class SocketBuffer(object):
     def read_line(self):
         line = ''
         while True:
-            c = self.get_char()
+            try:
+                c = self.get_char()
+            except IndexError:
+                continue
             line += c
             if c == '\n':
                 return line
@@ -1261,9 +1282,16 @@ class SocketBuffer(object):
     def get_chars(self, count):
         cc = ''
         for x in range(count):
-            cc += self.get_char()
+            try:
+                cc += self.get_char()
+            except IndexError:
+                continue
 
         return cc
+
+    def close(self):
+        self._sock.shutdown(socket.SHUT_RDWR)
+        self._sock.close()
 
 
 def make_ws_key():
