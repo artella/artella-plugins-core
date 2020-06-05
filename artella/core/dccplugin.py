@@ -703,6 +703,158 @@ class ArtellaDccPlugin(object):
 
         return dcc.reference_scene(file_path=file_path)
 
+    def _execute_in_main_thread(self, invoker_id, fn, *args, **kwargs):
+        """
+        Internal function that executes the given function and arguments with the given invoker. If the invoker
+        is not ready or if the calling thread is the main thread, the function is called immediately with given
+        arguments.
+
+        :param int invoker_id: _SYNC_INVOKER or _ASYNC_INVOKER
+        :param callable fn: function to call
+        :param args:
+        :param kwargs:
+        :return: Return value from the invoker
+        :rtype: object
+        """
+
+        dcc_main_thread_fn = dcc.pass_message_to_main_thread_fn()
+        if not qtutils.QT_AVAILABLE and not dcc_main_thread_fn:
+            return fn(*args, **kwargs)
+
+        # If DCC has a specific function to invoke functions in main thread, we use it
+        if dcc_main_thread_fn:
+            return dcc_main_thread_fn(fn, *args, **kwargs)
+        else:
+            invoker = (self._main_thread_invoker if invoker_id == self._SYNC_INVOKER else self._main_thread_async_invoker)
+            if invoker:
+                if QtWidgets.QApplication.instance() and (
+                        QtCore.QThread.currentThread() != QtWidgets.QApplication.instance().thread()):
+                    return invoker.invoke(fn, *args, **kwargs)
+                else:
+                    return fn(*args, **kwargs)
+            else:
+                return fn(*args, **kwargs)
+
+    def _create_main_thread_invokers(self):
+        """
+        Internal function that creates invoker objects that allow to invoke function calls on the main thread when
+        called from a different thread
+        """
+
+        invoker = None
+        async_invoker = None
+
+        if qtutils.QT_AVAILABLE:
+
+            class MainThreadInvoker(QtCore.QObject):
+                """
+                Class that implements a mechanism to execute a function with arbitrary arguments in main thread for DCCs
+                that support Qt
+                """
+
+                def __init__(self):
+                    super(MainThreadInvoker, self).__init__()
+
+                    self._lock = threading.Lock()
+                    self._fn = None
+                    self._res = None
+
+                def invoke(self, fn, *args, **kwargs):
+                    """
+                    Invoke the given function with the given arguments and keyword arguments in the main thread
+
+                    :param function fn: function to execute in main thread
+                    :param tuple args: args for the function
+                    :param dict kwargs: Named arguments for the function
+                    :return: Returns the result returned by the function
+                    :rtype: object
+                    """
+
+                    # Acquire lock to make sure that both function and result are not overwritten by synchronous calls
+                    # to this method from differnt threads
+                    self._lock.acquire()
+
+                    try:
+                        self._fn = lambda: fn(*args, **kwargs)
+                        self._res = None
+
+                        # Invoke the internal function that will run the function.
+                        # NOTE: We cannot pass/return arguments through invokeMethod as
+                        # this isn't properly supported by PySide
+                        QtCore.QMetaObject.invokeMethod(self, '_do_invoke', QtCore.Qt.BlockingQueuedConnection)
+
+                        return self._res
+                    finally:
+                        self._lock.release()
+
+                def _do_invoke(self):
+                    """
+                    Internal function that executes the function
+                    """
+
+                    self._res = self._fn()
+
+            class MainThreadAsyncInvoker(QtCore.QObject):
+                """
+                Class that implements a mechanism to execute a function with arbitrary arguments in main
+                thread asynchronously
+                for DCCs that support Qt
+                """
+
+                __signal = QtCore.Signal(object)
+
+                def __init__(self):
+                    super(MainThreadAsyncInvoker, self).__init__()
+
+                    self.__signal.connect(self.__execute_in_main_thread)
+
+                def invoke(self, fn, *args, **kwargs):
+                    """
+                     Invoke the given function with the given arguments and keyword arguments in the main thread
+
+                     :param function fn: function to execute in main thread
+                     :param tuple args: args for the function
+                     :param dict kwargs: Named arguments for the function
+                     :return: Returns the result returned by the function
+                     :rtype: object
+                     """
+
+                    self._signal.emit(lambda: fn(*args, **kwargs))
+
+                def __execute_in_main_thread(self, fn):
+                    """
+                    Internal function that executes the function
+                    """
+
+                    fn()
+
+            # Make sure invoker exists in main thread
+            invoker = MainThreadInvoker()
+            async_invoker = MainThreadAsyncInvoker()
+            if QtCore.QCoreApplication.instance():
+                invoker.moveToThread(QtCore.QCoreApplication.instance().thread())
+                async_invoker.moveToThread(QtCore.QCoreApplication.instance().thread())
+
+        return invoker, async_invoker
+
+    # ==============================================================================================================
+    # CALLBACKS
+    # ==============================================================================================================
+
+    def _on_quit_app(self):
+        """
+        Internal callback function is called when a DCC with Qt support is closed. We use it to make sure that
+        Artella Drive Client is stopped.
+        """
+
+        logger.log_debug('Quiting app ...')
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return
+
+        artella_drive_client.artella_drive_disconnect()
+
     # ==============================================================================================================
     # ABSTRACT
     # ==============================================================================================================
