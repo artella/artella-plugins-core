@@ -9,23 +9,31 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import time
+import threading
 
 import artella
 from artella import dcc
 from artella import logger
 from artella import register
-from artella.core import utils
+from artella.core import utils, qtutils, splash
+from artella.widgets import snackbar
+
+if qtutils.QT_AVAILABLE:
+    from artella.externals.Qt import QtCore, QtWidgets
 
 
 class ArtellaDccPlugin(object):
 
     MENU_NAME = 'Artella'
+    _ASYNC_INVOKER, _SYNC_INVOKER = range(2)
 
     def __init__(self, artella_drive_client):
         super(ArtellaDccPlugin, self).__init__()
 
         self._artella_drive_client = artella_drive_client
         self._main_menu = None
+
+        self._main_thread_invoker, self._main_thread_async_invoker = self._create_main_thread_invokers()
 
     # ==============================================================================================================
     # INITIALIZATION / SHUTDOWN
@@ -72,7 +80,7 @@ class ArtellaDccPlugin(object):
         self.setup_callbacks()
 
         # Create Artella DCC Menu
-        self.create_menus()
+        dcc.execute_deferred(self.create_menus)
 
         artella_drive_client = self.get_client()
         if artella_drive_client:
@@ -82,6 +90,17 @@ class ArtellaDccPlugin(object):
             logger.log_warning(
                 'Artella Drive Client was not initialized. Artella server '
                 'dependant functionality will not be available!')
+
+        logger.log_debug('trying to create quit signal ...')
+        if qtutils.QT_AVAILABLE:
+            app = QtWidgets.QApplication.instance()
+            logger.log_debug('connecting dcc app to signal: {}'.format(app))
+            if app:
+                app.aboutToQuit.connect(self._on_quit_app)
+            else:
+                logger.log_debug('Impossible to connect because app does not exists')
+        else:
+            logger.log_debug('Impossible to create signal because qt is not available')
 
         return True
 
@@ -100,10 +119,43 @@ class ArtellaDccPlugin(object):
 
         # Finish Artella Drive Client thread
         if self._artella_drive_client:
-            self._artella_drive_client.artella_drive_disconnect()
+            # self._artella_drive_client.artella_drive_disconnect()
             self._artella_drive_client = None
 
         return True
+
+    # ==============================================================================================================
+    #  EXECUTION
+    # ==============================================================================================================
+
+    def execute_in_main_thread(self, fn, *args, **kwargs):
+        """
+        Executes the given function in the main thread when called from a non-main thread. This will block the
+        calling thread until the function returns.
+
+        .. warning: This can introduce a deadlock if the main thread is waiting for a background thread and the
+            this thread is invoking this method. Since the main thread is waiting for the background thread to finish,
+            Qt's event loop won't be able to process the request to execute in the main thread
+        :param fn: function to call
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        return self._execute_in_main_thread(self._SYNC_INVOKER, fn, *args, **kwargs)
+
+    def async_execute_in_main_thread(self, fn, *args, **kwargs):
+        """
+        Executes the given function in the main thread when called from a non-main thread. This call will return
+        immediately and will not wait for the code to be executed in the main thread.
+
+        :param fn: function to call
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        return self._execute_in_main_thread(self._ASYNC_INVOKER, fn, *args, **kwargs)
 
     # ==============================================================================================================
     #  MENU
@@ -133,15 +185,6 @@ class ArtellaDccPlugin(object):
             return False
 
         self._main_menu = artella_menu
-
-        # dcc.add_menu_item(
-        #     menu_item_name='Save to Cloud',
-        #     menu_item_command='import artella; artella.DccPlugin().make_new_version(show_dialogs=True)',
-        #     parent_menu=artella_menu)
-        # dcc.add_menu_item(
-        #     menu_item_name='Get Dependencies',
-        #     menu_item_command='import artella; artella.DccPlugin().get_dependencies(show_dialogs=True)',
-        #     parent_menu=artella_menu)
 
         return True
 
@@ -239,7 +282,7 @@ class ArtellaDccPlugin(object):
         """
 
         logger.log_debug('Passing message to {}: {}'.format(dcc.name(), json_data))
-        dcc.pass_message_to_main_thread(self.handle_message, json_data)
+        self.execute_in_main_thread(self.handle_message, json_data)
 
     def handle_message(self, msg):
         """
@@ -404,7 +447,7 @@ class ArtellaDccPlugin(object):
     # VERSIONS
     # ==============================================================================================================
 
-    def make_new_version(self, file_path=None, comment=None):
+    def make_new_version(self, file_path=None, comment=None, do_lock=False):
         """
         Uploads a new file/folder or a new version of current opened DCC scene file
 
@@ -412,6 +455,8 @@ class ArtellaDccPlugin(object):
             opened DCC scene file path will be used.
         :param str comment: Optional comment to add to new version metadata. If not given, a generic message will be
             used.
+        :param bool do_lock: Whether or not to force the lock of the file to make a new version. With new Artella
+            version this is not mandatory.
         :return: True if the make new version operation is completed successfully; False otherwise.
         :rtype: bool
         """
@@ -442,18 +487,16 @@ class ArtellaDccPlugin(object):
         next_version = file_version + 1
 
         is_locked, _, _, _ = artella_drive_client.check_lock(file_path)
-
-        if not is_locked:
+        if not is_locked and do_lock:
             valid_lock = self.lock_file()
             if not valid_lock:
-                msg = 'Unable to lock file to make new version ({})'.format(next_version)
-                logger.log_error(msg)
+                self.show_error_message( 'Unable to lock file to make new version ({})'.format(next_version))
                 return False
 
         logger.log_info('Saving current scene: {}'.format(file_path))
         valid_save = dcc.save_scene()
         if not valid_save:
-            logger.log_error('Unable to save current scene: "{}"'.format(file_path))
+            self.show_error_message('Unable to save current scene: "{}"'.format(file_path))
             version_created = False
         else:
             uri_path = self.local_path_to_uri(file_path)
@@ -461,9 +504,10 @@ class ArtellaDccPlugin(object):
             if rsp.get('error'):
                 msg = 'Unable to upload a new version of file: "{}"\n{}\n{}'.format(
                     os.path.basename(file_path), rsp.get('url'), rsp.get('error'))
+                self.show_error_message(msg)
                 version_created = False
 
-        if not is_locked:
+        if not is_locked and do_lock:
             self.unlock_file(show_dialogs=False)
 
         return version_created
@@ -471,6 +515,36 @@ class ArtellaDccPlugin(object):
     # ==============================================================================================================
     # LOCK/UNLOCK STATUS
     # ==============================================================================================================
+
+    def check_lock(self, file_path=None, show_dialogs=True):
+        """
+        Returns whether or not the given file is locked and whether or not current user is the one that has the file
+        locked.
+
+        :param str file_path: Absolute local file path to check lock status of
+        :return: Returns a tuple with the following fields:
+            - is_locked: True if the given file is locked; False otherwise
+            - is_locked_by_me: True if the given file is locked by current user; False otherwise
+            - locked_by_name: Name of the user that currently has the file locked
+            - remote_record_found: Indicates whether the request relates to an existing remote file record or not
+        :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :rtype: tuple(bool, bool, str)
+        """
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        if not file_path:
+            file_path = dcc.scene_name()
+        if not file_path:
+            msg = 'File "{}" does not exists. Impossible to check lock status!'.format(file_path)
+            logger.log_warning(msg)
+            if show_dialogs:
+                dcc.show_warning(title='Artella - Failed to check lost status', message=msg)
+            return False, False, '', False
+
+        return artella_drive_client.check_lock(file_path)
 
     def can_lock_file(self, file_path=None, show_dialogs=True):
         """
@@ -491,7 +565,7 @@ class ArtellaDccPlugin(object):
         if not file_path:
             file_path = dcc.scene_name()
         if not file_path:
-            msg = 'File "{}" does not exists. Impossible to check lock status!'.format(file_path)
+            msg = 'File "{}" does not exists. Impossible to check if file can be locked or not!'.format(file_path)
             logger.log_warning(msg)
             if show_dialogs:
                 dcc.show_warning(title='Artella - Failed to check lost status', message=msg)
@@ -564,13 +638,14 @@ class ArtellaDccPlugin(object):
 
         return True
 
-    def unlock_file(self, file_path=None, show_dialogs=True):
+    def unlock_file(self, file_path=None, show_dialogs=True, force=False):
         """
         Unlocks given file path in Artella Drive.
 
         :param str or None file_path: Absolute local file path we want to lock. If not given, current DCC scene file
             will be unlocked.
         :param bool show_dialogs: Whether UI dialogs should appear or not.
+        :param bool force: Whether or not unlock operation should be done without asking the user
         :return: True if the lock operation was successful; False otherwise
         :rtype: bool
         """
@@ -596,7 +671,7 @@ class ArtellaDccPlugin(object):
             return False
 
         result = True
-        if show_dialogs:
+        if show_dialogs and not force:
             msg = 'You have file "{}" locked in Artella.\nUnlock it now?'.format(os.path.basename(file_path))
             result = dcc.show_question('Artella - Unlock File', msg, cancel=False)
         if result is not True:
@@ -636,30 +711,119 @@ class ArtellaDccPlugin(object):
 
         local_path = artella_drive_client.translate_path(file_path)
 
-        dcc_progress_bar = artella.ProgressBar()
-        dcc_progress_bar.start()
+        if show_dialogs:
+            dcc_progress_bar = splash.ProgressSplashDialog()
+            dcc_progress_bar.start()
+            if qtutils.QT_AVAILABLE:
+                QtWidgets.QApplication.instance().processEvents()
 
         artella_drive_client.download(local_path)
         time.sleep(1.0)
 
         valid_download = True
         while True:
-            if show_dialogs:
-                if dcc_progress_bar.is_cancelled():
-                    artella_drive_client.pause_downloads()
-                    valid_download = False
-                    break
+            dcc_progress_bar.repaint()
+            if dcc_progress_bar.is_cancelled():
+                artella_drive_client.pause_downloads()
+                valid_download = False
+                break
             progress, fd, ft, bd, bt = artella_drive_client.get_progress()
-            progress_status = '{} of {} KiB downloaded\n{} of {} files downloaded'.format(
-                    int(bd / 1024), int(bt / 1024), fd, ft)
+            progress_status = '{} | {} of {} KiB downloaded\n{} of {} files downloaded'.format(
+                    os.path.basename(file_path), int(bd / 1024), int(bt / 1024), fd, ft)
             if show_dialogs:
                 dcc_progress_bar.set_progress_value(value=progress, status=progress_status)
+                if qtutils.QT_AVAILABLE:
+                    QtWidgets.QApplication.instance().processEvents()
             if progress >= 100 or bd == bt:
                 break
 
         dcc_progress_bar.end()
 
         return valid_download
+
+    # ==============================================================================================================
+    # UI
+    # ==============================================================================================================
+
+    def show_artella_message(self, text, title='', duration=None, closable=True):
+        """
+        Shows an artella message
+        :param text:
+        :param title:
+        :param duration:
+        :param closable:
+        :return:
+        """
+
+        logger.log_debug(str(text))
+        if not qtutils.QT_AVAILABLE:
+            return
+
+        snackbar.SnackBarMessage.artella(text=text, title=title, duration=duration, closable=closable)
+
+    def show_success_message(self, text, title='', duration=None, closable=True):
+        """
+        Shows a success message
+        :param text:
+        :param title:
+        :param duration:
+        :param closable:
+        :return:
+        """
+
+        logger.log_info(str(text))
+        if not qtutils.QT_AVAILABLE:
+            return
+
+        snackbar.SnackBarMessage.success(text=text, title=title, duration=duration, closable=closable)
+
+    def show_info_message(self, text, title='', duration=None, closable=True):
+        """
+        Shows an info message
+        :param text:
+        :param title:
+        :param duration:
+        :param closable:
+        :return:
+        """
+
+        logger.log_info(str(text))
+        if not qtutils.QT_AVAILABLE:
+            return
+
+        snackbar.SnackBarMessage.info(text=text, title=title, duration=duration, closable=closable)
+
+    def show_warning_message(self, text, title='', duration=None, closable=True):
+        """
+        Shows a warning message
+        :param text:
+        :param title:
+        :param duration:
+        :param closable:
+        :return:
+        """
+
+        logger.log_warning(str(text))
+        if not qtutils.QT_AVAILABLE:
+            return
+
+        snackbar.SnackBarMessage.warning(text=text, title=title, duration=duration, closable=closable)
+
+    def show_error_message(self, text, title='', duration=None, closable=True):
+        """
+        Shows an error message
+        :param text:
+        :param title:
+        :param duration:
+        :param closable:
+        :return:
+        """
+
+        logger.log_error(str(text))
+        if not qtutils.QT_AVAILABLE:
+            return
+
+        snackbar.SnackBarMessage.error(text=text, title=title, duration=duration, closable=closable)
 
     # ==============================================================================================================
     # INTERNAL
@@ -702,6 +866,158 @@ class ArtellaDccPlugin(object):
         """
 
         return dcc.reference_scene(file_path=file_path)
+
+    def _execute_in_main_thread(self, invoker_id, fn, *args, **kwargs):
+        """
+        Internal function that executes the given function and arguments with the given invoker. If the invoker
+        is not ready or if the calling thread is the main thread, the function is called immediately with given
+        arguments.
+
+        :param int invoker_id: _SYNC_INVOKER or _ASYNC_INVOKER
+        :param callable fn: function to call
+        :param args:
+        :param kwargs:
+        :return: Return value from the invoker
+        :rtype: object
+        """
+
+        dcc_main_thread_fn = dcc.pass_message_to_main_thread_fn()
+        if not qtutils.QT_AVAILABLE and not dcc_main_thread_fn:
+            return fn(*args, **kwargs)
+
+        # If DCC has a specific function to invoke functions in main thread, we use it
+        if dcc_main_thread_fn:
+            return dcc_main_thread_fn(fn, *args, **kwargs)
+        else:
+            invoker = (self._main_thread_invoker if invoker_id == self._SYNC_INVOKER else self._main_thread_async_invoker)
+            if invoker:
+                if QtWidgets.QApplication.instance() and (
+                        QtCore.QThread.currentThread() != QtWidgets.QApplication.instance().thread()):
+                    return invoker.invoke(fn, *args, **kwargs)
+                else:
+                    return fn(*args, **kwargs)
+            else:
+                return fn(*args, **kwargs)
+
+    def _create_main_thread_invokers(self):
+        """
+        Internal function that creates invoker objects that allow to invoke function calls on the main thread when
+        called from a different thread
+        """
+
+        invoker = None
+        async_invoker = None
+
+        if qtutils.QT_AVAILABLE:
+
+            class MainThreadInvoker(QtCore.QObject):
+                """
+                Class that implements a mechanism to execute a function with arbitrary arguments in main thread for DCCs
+                that support Qt
+                """
+
+                def __init__(self):
+                    super(MainThreadInvoker, self).__init__()
+
+                    self._lock = threading.Lock()
+                    self._fn = None
+                    self._res = None
+
+                def invoke(self, fn, *args, **kwargs):
+                    """
+                    Invoke the given function with the given arguments and keyword arguments in the main thread
+
+                    :param function fn: function to execute in main thread
+                    :param tuple args: args for the function
+                    :param dict kwargs: Named arguments for the function
+                    :return: Returns the result returned by the function
+                    :rtype: object
+                    """
+
+                    # Acquire lock to make sure that both function and result are not overwritten by synchronous calls
+                    # to this method from differnt threads
+                    self._lock.acquire()
+
+                    try:
+                        self._fn = lambda: fn(*args, **kwargs)
+                        self._res = None
+
+                        # Invoke the internal function that will run the function.
+                        # NOTE: We cannot pass/return arguments through invokeMethod as
+                        # this isn't properly supported by PySide
+                        QtCore.QMetaObject.invokeMethod(self, '_do_invoke', QtCore.Qt.BlockingQueuedConnection)
+
+                        return self._res
+                    finally:
+                        self._lock.release()
+
+                def _do_invoke(self):
+                    """
+                    Internal function that executes the function
+                    """
+
+                    self._res = self._fn()
+
+            class MainThreadAsyncInvoker(QtCore.QObject):
+                """
+                Class that implements a mechanism to execute a function with arbitrary arguments in main
+                thread asynchronously
+                for DCCs that support Qt
+                """
+
+                __signal = QtCore.Signal(object)
+
+                def __init__(self):
+                    super(MainThreadAsyncInvoker, self).__init__()
+
+                    self.__signal.connect(self.__execute_in_main_thread)
+
+                def invoke(self, fn, *args, **kwargs):
+                    """
+                     Invoke the given function with the given arguments and keyword arguments in the main thread
+
+                     :param function fn: function to execute in main thread
+                     :param tuple args: args for the function
+                     :param dict kwargs: Named arguments for the function
+                     :return: Returns the result returned by the function
+                     :rtype: object
+                     """
+
+                    self._signal.emit(lambda: fn(*args, **kwargs))
+
+                def __execute_in_main_thread(self, fn):
+                    """
+                    Internal function that executes the function
+                    """
+
+                    fn()
+
+            # Make sure invoker exists in main thread
+            invoker = MainThreadInvoker()
+            async_invoker = MainThreadAsyncInvoker()
+            if QtCore.QCoreApplication.instance():
+                invoker.moveToThread(QtCore.QCoreApplication.instance().thread())
+                async_invoker.moveToThread(QtCore.QCoreApplication.instance().thread())
+
+        return invoker, async_invoker
+
+    # ==============================================================================================================
+    # CALLBACKS
+    # ==============================================================================================================
+
+    def _on_quit_app(self):
+        """
+        Internal callback function is called when a DCC with Qt support is closed. We use it to make sure that
+        Artella Drive Client is stopped.
+        """
+
+        logger.log_debug('Quiting app ...')
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return
+
+        artella_drive_client.artella_drive_disconnect()
 
     # ==============================================================================================================
     # ABSTRACT

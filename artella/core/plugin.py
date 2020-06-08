@@ -51,6 +51,15 @@ class ArtellaPlugin(object):
         if self._loaded:
             self.cleanup()
 
+        dcc.execute_deferred(self.init_ui)
+
+        self._loaded = True
+
+    def init_ui(self):
+        """
+        Function that initializes plugin UI related functionality
+        """
+
         main_menu = artella.DccPlugin().get_main_menu()
         if not main_menu:
             return
@@ -68,8 +77,6 @@ class ArtellaPlugin(object):
                 menu_label = plugin_menu['label']
                 menu_command = plugin_menu['command']
                 dcc.add_menu_item(menu_label, menu_command, main_menu)
-
-        self._loaded = True
 
     def cleanup(self):
         """
