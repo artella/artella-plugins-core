@@ -12,9 +12,11 @@ import sys
 import imp
 import time
 import json
+import shutil
 import fnmatch
 import inspect
 import importlib
+import subprocess
 from functools import wraps
 
 from artella import logger
@@ -121,10 +123,10 @@ def force_list(var, remove_duplicates=False):
 
 def get_files(root_folder, pattern='*'):
     """
-    Returns files found in given folder and sub folders taking into accunt the given pattern
+    Returns files found in given folder and sub folders taking into account the given pattern
     :param str root_folder: root folder where we want to start searching from
     :param str pattern: find pattern that we use to filter our search for specific file names or extensions
-    :return: List of files located in given root folder hierarhcy and with the given pattern
+    :return: List of files located in given root folder hierarchy and with the given pattern
     :rtype: list(str)
     """
 
@@ -138,6 +140,108 @@ def get_files(root_folder, pattern='*'):
             files_found.append(clean_path(os.path.join(dir_path, file_name)))
 
     return list(set(files_found))
+
+
+def open_folder(path):
+    """
+    Open folder using OS default settings
+    :param path: str, folder path we want to open
+    """
+
+    if sys.platform.startswith('darwin'):
+        subprocess.Popen(["open", path])
+    elif os.name == 'nt':
+        os.startfile(path)
+    elif os.name == 'posix':
+        subprocess.Popen(["xdg-open", path])
+    else:
+        raise NotImplementedError('OS not supported: {}'.format(os.name))
+
+
+def open_file(file_path):
+    """
+    Open file using OS default settings
+    :param file_path: str, file path we want to open
+    """
+
+    if sys.platform.startswith('darwin'):
+        subprocess.call(('open', file_path))
+    elif os.name == 'nt':
+        os.startfile(file_path)
+    elif os.name == 'posix':
+        subprocess.call(('xdg-open', file_path))
+    else:
+        raise NotImplementedError('OS not supported: {}'.format(os.name))
+
+
+def get_permission(filepath):
+    """
+    Returns the current permission level
+    :param filepath: str
+    """
+
+    if os.access(filepath, os.R_OK | os.W_OK | os.X_OK):
+        return True
+
+    try:
+        os.chmod(filepath, 0o775)
+        return True
+    except Exception:
+        return False
+
+
+def delete_file(file_path):
+    """
+    Delete the file by name in the directory
+    :param name: str, name of the file to delete
+    :param directory: str, the directory where the file is stored
+    :return: str, file path that was deleted
+    """
+
+    if not os.path.isfile(file_path):
+        logger.log_warning('File "{}" was not deleted.'.format(file_path))
+        return False
+
+    try:
+        get_permission(file_path)
+    except Exception:
+        pass
+    os.remove(file_path)
+
+    if os.path.isfile(file_path):
+        return False
+
+    return True
+
+
+def delete_folder(folder_name, directory=None):
+    """
+    Deletes the folder by name in the given directory
+    :param folder_name: str, name of the folder to delete
+    :param directory: str, the directory path where the folder is stored
+    :return: str, folder that was deleted with path
+    """
+
+    def delete_read_only_error(action, name, exc):
+        """
+        Helper to delete read only files
+        """
+
+        os.chmod(name, 0o777)
+        action(name)
+
+    full_path = folder_name
+    if directory:
+        full_path = clean_path(os.path.join(directory, folder_name))
+    if not os.path.isdir(full_path):
+        return None
+
+    try:
+        shutil.rmtree(full_path, onerror=delete_read_only_error)
+    except Exception as exc:
+        logger.log_warning('Could not remove folder "{}" | {}'.format(full_path, exc))
+
+    return full_path
 
 
 def debug_object_string(obj, msg):
@@ -184,7 +288,7 @@ def import_module(module_path, name=None):
             if name in sys.modules:
                 return sys.modules[name]
         if os.path.isdir(module_path):
-            module_path = os.path.join(module_path, '__init__.py')
+            module_path = clean_path(os.path.join(module_path, '__init__.py'))
             if not os.path.exists(module_path):
                 raise ValueError('Cannot find module path: "{}"'.format(module_path))
         return imp.load_source(name, os.path.realpath(module_path))
@@ -212,7 +316,7 @@ def iterate_modules(path, exclude=None):
         for f in files:
             base_name = os.path.splitext(f)[0]
             if f not in _exclude and base_name not in exclude:
-                module_path = os.path.join(root, f)
+                module_path = clean_path(os.path.join(root, f))
                 if f.endswith('.py') or f.endswith('.pyc'):
                     yield module_path
 
