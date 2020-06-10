@@ -349,8 +349,8 @@ class ArtellaPluginsManager(object):
             added = False
             for i, plugin_item in enumerate(ordered_plugins_list):
                 plugin_item_index = plugin_item.values()[0]['index']
-                if plugin_index < plugin_item_index:
-                    ordered_plugins_list.insert(i, {plugin_id: {'index': plugin_index, 'dict': plugin_dict}})
+                if plugin_index > plugin_item_index:
+                    ordered_plugins_list.insert(0, {plugin_id: {'index': plugin_index, 'dict': plugin_dict}})
                     added = True
                     break
             if not added:
