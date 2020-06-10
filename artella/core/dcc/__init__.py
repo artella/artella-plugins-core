@@ -8,6 +8,7 @@ Module that contains dcc module initialization
 from __future__ import print_function, division, absolute_import
 
 import os
+import sys
 from functools import wraps
 from importlib import import_module
 
@@ -71,6 +72,8 @@ def current_dcc():
             for dcc_folder in os.listdir(dcc_dir):
                 if not dcc_folder.startswith('__') and not dcc_folder.endswith('__') and dcc_folder != 'abstract':
                     DCCS[dcc_folder] = utils.clean_path(os.path.join(dcc_dir, dcc_folder))
+                    if DCCS[dcc_folder] not in sys.path:
+                        sys.path.append(DCCS[dcc_folder])
 
     # Loop through all available DCCs and check which one is available in current session
     for dcc_name, dcc_dir in DCCS.items():
