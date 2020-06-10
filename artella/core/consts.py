@@ -30,6 +30,9 @@ DEFAULT_HOST = '127.0.0.1'
 # Defines default port used by the client
 DEFAULT_PORT = 29282
 
+# Defines default buffer size for web socket requests to Artella Drive App
+DEFAULT_BUFFER_SIZE = 2000
+
 # Defines the file name used by Artella Drive App to store project specific metadata
 PROJECT_METADATA_FILE = '.artella-folder.yaml'
 

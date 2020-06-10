@@ -8,15 +8,14 @@ Module that contains ArtellaDrive Python client implementation
 from __future__ import print_function, division, absolute_import
 
 import os
-import time
 import json
+import time
 import codecs
 import socket
 import base64
 import random
 import hashlib
 import threading
-import traceback
 from collections import OrderedDict
 try:
     from urllib.parse import urlparse, urlencode, urlunparse
@@ -29,7 +28,7 @@ except ImportError:
 
 import artella
 from artella import logger
-from artella.core import consts, qtutils, utils, exceptions
+from artella.core import consts, utils, exceptions
 
 
 class ArtellaDriveClient(object):
@@ -49,6 +48,7 @@ class ArtellaDriveClient(object):
         self._batch_ids = set()         # Contains a list that tracks all calls made to the client during a session.
         self._socket_buffer = None      # Contains instance of the socket buffer used to communicate with Artella App.
         self._running = False           # Flag that is True while Artella Drive thread is running.
+        self._available = True          # Flag that is True while Artella Drive is available.
         self._exception = None          # Contains exception caused while Artella Drive is running.
         self._extensions = extensions   # Contains a list with all extensions managed by the client.
         self._client_thread = None      # Contains Python client thread
@@ -58,16 +58,28 @@ class ArtellaDriveClient(object):
     # ==============================================================================================================
 
     @property
-    def running(self):
+    def is_running(self):
         """
         Returns whether or not current Artella Drive thread is running.
         While Artella Drive thread is running, it listens responses from Artella Drive
 
-        :return: True if the Artella Drive thread is running; False otherwise
+        :return: True if the Artella Drive thread is running; False otherwise.
         :rtype: bool
         """
 
         return self._running
+
+    @property
+    def is_available(self):
+        """
+        Returns whether or not current Artella Drive client is available.
+        Artella Drive Client is not available, for example, is the user closes Artella Drive App manually.
+
+        :return: True if Artella Drive Client is available; False otherwise.
+        :rtype: bool
+        """
+
+        return self._available
 
     # ==============================================================================================================
     # CLASS FUNCTIONS
@@ -89,7 +101,7 @@ class ArtellaDriveClient(object):
         # We need to check this each time in case the local server got restarted
         auth_header = artella_client.update_auth_challenge()
         if not auth_header:
-            logger.log_error('Local Artella Drive is not available. Please launch Artella Drive App.')
+            logger.log_warning('Local Artella Drive is not available. Please launch Artella Drive App.')
             return None
 
         # Updates the list of available remotes
@@ -100,6 +112,16 @@ class ArtellaDriveClient(object):
     # ==============================================================================================================
     # CHALLENGE FILE
     # ==============================================================================================================
+
+    def check(self, update=False):
+        """
+        Checks whether or not current client is available and running
+
+        :param update:
+        :return:
+        """
+
+        return self._available and self._running and self.get_remote_sessions(update=update)
 
     def get_challenge_file_path(self):
         """
@@ -168,7 +190,7 @@ class ArtellaDriveClient(object):
 
         return self._remote_sessions
 
-    def update_remotes_sessions(self):
+    def update_remotes_sessions(self, show_dialogs=True):
         """
         Collects all available remote servers available.
 
@@ -178,6 +200,13 @@ class ArtellaDriveClient(object):
 
         from artella import dcc
 
+        def _ping_remote_sessions():
+            rsp = self.ping()
+            if 'error' in rsp:
+                msg = 'Attempting to retrieve remote sessions: "{}" '.format(rsp.get('error'))
+                logger.log_error(msg)
+            self._remote_sessions = rsp.get('remote_sessions', list())
+
         utils.clear_list(self._remote_sessions)
 
         if not self.update_auth_challenge():
@@ -186,17 +215,17 @@ class ArtellaDriveClient(object):
             dcc.show_error('Artella - Authentication error', msg)
             return
 
-        rsp = self.ping()
-        if 'error' in rsp:
-            msg = 'Attempting to retrieve remote sessions: "{}" '.format(rsp.get('error'))
-            logger.log_error(msg)
-            dcc.show_error('Artella - Bad remote response error', msg)
+        _ping_remote_sessions()
 
-        self._remote_sessions = rsp.get('remote_sessions', list())
+        # If not remote sessions found, we recheck after 1 second to make sure Artella Drive App is running.
         if not self._remote_sessions:
-            msg = 'No remote sessions available. Please visit your Project Drive in Artella Web App and try again!'
-            logger.log_error(msg)
-            dcc.show_error('Artella - Remote Sessions not available', msg)
+            time.sleep(1)
+            _ping_remote_sessions()
+            if not self._remote_sessions:
+                msg = 'No remote sessions available. Please visit your Project Drive in Artella Web App and try again!'
+                logger.log_error(msg)
+                if show_dialogs:
+                    dcc.show_error('Artella - Remote Sessions not available', msg)
 
         return self._remote_sessions
 
@@ -1055,9 +1084,9 @@ class ArtellaDriveClient(object):
         """
 
         server_address = (self._host, self._port)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         logger.log_info('Connecting to Artella Drive App web socket: {}'.format(server_address))
         try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(server_address)
         except Exception as exc:
             logger.log_error('Artella Plugin failed to connect to the Artella Drive App web socket: {}'.format(exc))
@@ -1073,19 +1102,15 @@ class ArtellaDriveClient(object):
     def artella_drive_disconnect(self):
         logger.log_debug('Disconnecting Artella Drive Client ...')
         self._running = False
-        if self._socket_buffer:
-            self._socket_buffer.close()
-            self._socket_buffer = None
+
+        return True
 
     def artella_drive_listen(self):
-        try:
-            self.artella_drive_connect()
-            if not self._socket_buffer:
-                logger.log_error('Socket to Artella Drive not connected.')
-                return
-            self._client_thread = threading.Thread(target=self._pull_messages,).start()
-        except Exception as exc:
-            logger.log_exception('{} | {}'.format(exc, traceback.format_exc()))
+        self.artella_drive_connect()
+        if not self._socket_buffer:
+            logger.log_error('Socket to Artella Drive not connected.')
+            return
+        self._client_thread = threading.Thread(target=self._pull_messages,).start()
 
     def artella_drive_send_request(self, sock):
 
@@ -1119,7 +1144,14 @@ class ArtellaDriveClient(object):
         rr = consts.CRLF.join(r) + consts.CRLF + consts.CRLF
         logger.log_debug(
             'Artella Plugin sending websocket access request to the local Artella Drive App: {}'.format(r))
-        sock.sendall(rr.encode())
+
+        try:
+            sock.sendall(rr.encode())
+        except Exception as exc:
+            logger.log_warning('Was not possible to send request to Artella Drive App: {}'.format(exc))
+            return False
+
+        return True
 
     def artella_drive_read_response(self):
         logger.log_debug('Reading socket response ...')
@@ -1189,6 +1221,26 @@ class ArtellaDriveClient(object):
                     logger.log_debug('ArtellaDriver JSON response: "{}"'.format(json_data))
                     return json_data
 
+    def _disconnect(self):
+        """
+        Internal function that closes current Artella Drive client web socket
+
+        :return: True if the web socket was successfully disconnected; False otherwise.
+        :rtype: bool
+        """
+
+        try:
+            if self._socket_buffer:
+                self._socket_buffer.close()
+                self._socket_buffer = None
+                self._running = False
+        except Exception as exc:
+            logger.log_error(
+                'Error while disconnect Artella Plugin from Artelal Drive App web socket ... {}'.format(exc))
+            return False
+
+        return True
+
     def _track_response(self, rsp):
         """
         Internal function that extracts batch_id and transfer_data from response so that we can continue the
@@ -1208,30 +1260,25 @@ class ArtellaDriveClient(object):
         logger.log_debug('Listening for commands on websocket')
         while self._running:
             try:
-                if self._exception:
-                    self._exception = None
-                    self.artella_drive_disconnect()
-                    qtutils.show_error_message_box(
-                        'Artella Drive App - Error',
-                        'Error while getting message from Artella Drive App. Your Artella '
-                        'session has been aborted. Restart DCC to relaunch Artella Plugin')
                 msg = self._get_message()
-                logger.log_debug('Message received: {}'.format(msg))
-                artella.DccPlugin().pass_message(msg)
             except Exception as exc:
-                logger.log_exception('{} | {}'.format(exc, traceback.format_exc()))
-                self._exception = exc
+                self._available = False
+                try:
+                    if exc.errno == 10054:
+                        self._disconnect()
+                except Exception as exc:
+                    pass
+                logger.log_debug(str(exc))
+                continue
 
-        logger.log_debug('Stopping messages pull ...')
+            self._available = True
+            logger.log_debug('Message received: {}'.format(msg))
+            artella.DccPlugin().pass_message(msg)
 
-        if self._client_thread:
-            logger.log_debug('Stopping Artella Drive Client thread ...')
-            time.sleep(1)
-            self._client_thread.join()
+        # If Artella Drive Client is nor running we force disconnection
+        self._disconnect()
 
     def _get_message(self):
-        if not self._socket_buffer:
-            return {}
         op_code = ord(self._socket_buffer.get_char())
         v = ord(self._socket_buffer.get_char())
         if op_code != 129:
@@ -1263,17 +1310,14 @@ class SocketBuffer(object):
     def read_line(self):
         line = ''
         while True:
-            try:
-                c = self.get_char()
-            except IndexError:
-                continue
+            c = self.get_char()
             line += c
             if c == '\n':
                 return line
 
     def get_char(self):
         if len(self._buffer) == 0:
-            self._buffer = self._sock.recv(2000)
+            self._buffer = self._sock.recv(consts.DEFAULT_BUFFER_SIZE)
         r = self._buffer[0]
         self._buffer = self._buffer[1:]
 
@@ -1282,10 +1326,7 @@ class SocketBuffer(object):
     def get_chars(self, count):
         cc = ''
         for x in range(count):
-            try:
-                cc += self.get_char()
-            except IndexError:
-                continue
+            cc += self.get_char()
 
         return cc
 

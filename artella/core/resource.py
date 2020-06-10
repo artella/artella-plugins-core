@@ -105,16 +105,16 @@ class ResourcesManager(object):
         :return: object
         """
 
+        color = kwargs.get('color', '')
+        file_name = '{}{}'.format(name, extension)
+        file_key = '{}{}'.format(file_name.lower(), color)
+
         if not qtutils.QT_AVAILABLE or not self._resources_paths or resource_type not in self._resources_cache:
-            return None
+            return None, file_key
 
         if not extension.startswith('.'):
             extension = '.{}'.format(extension)
 
-        color = kwargs.get('color', '')
-
-        file_name = '{}{}'.format(name, extension)
-        file_key = '{}{}'.format(file_name.lower(), color)
         if file_key in self._resources_cache[resource_type]:
             return self._resources_cache[resource_type][file_key], file_key
 

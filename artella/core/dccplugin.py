@@ -15,7 +15,7 @@ import artella
 from artella import dcc
 from artella import logger
 from artella import register
-from artella.core import utils, qtutils, splash
+from artella.core import utils, qtutils, splash, client
 from artella.widgets import snackbar
 
 if qtutils.QT_AVAILABLE:
@@ -31,9 +31,24 @@ class ArtellaDccPlugin(object):
         super(ArtellaDccPlugin, self).__init__()
 
         self._artella_drive_client = artella_drive_client
+        self._dev = False
         self._main_menu = None
 
         self._main_thread_invoker, self._main_thread_async_invoker = self._create_main_thread_invokers()
+
+    # ==============================================================================================================
+    # PROPERTIES
+    # ==============================================================================================================
+
+    @property
+    def dev(self):
+        """
+        Returns whether Artella DCC plugin is being executed in dev mode or not
+        :return: True if dev mode is enabled; False otherwise.
+        :rtype: bool
+        """
+
+        return self._dev
 
     # ==============================================================================================================
     # INITIALIZATION / SHUTDOWN
@@ -50,31 +65,14 @@ class ArtellaDccPlugin(object):
 
         pass
 
-    def register_extensions(self):
+    def init(self, dev=False):
         """
-        Register specific extensions for this DCC
-        This function should be override in specific DCC plugin implementation
-        Is not an abstract function because its implementation is not mandatory
-        """
-
-        dcc_extensions = dcc.extensions()
-        if not dcc_extensions:
-            return
-
-        artella_drive_client = self.get_client()
-        if not artella_drive_client:
-            logger.log_warning(
-                'Artella Drive was not initialized. Impossible to register extensions: {}'.format(dcc_extensions))
-            return
-
-        artella_drive_client.register_extensions(dcc_extensions)
-
-    def init(self):
-        """
-        Initializes Artella plugin in current DCC
-        :return: True if the initialization was successful; False otherwise
+        Initializes Artella plugin in current DCC.
+        :return: True if the initialization was successful; False otherwise.
         :rtype: bool
         """
+
+        self._dev = dev
 
         # Initialize Artella callbacks
         self.setup_callbacks()
@@ -82,14 +80,8 @@ class ArtellaDccPlugin(object):
         # Create Artella DCC Menu
         dcc.execute_deferred(self.create_menus)
 
-        artella_drive_client = self.get_client()
-        if artella_drive_client:
-            artella_drive_client.artella_drive_listen()
-            self.setup_project(artella_drive_client.get_local_root())
-        else:
-            logger.log_warning(
-                'Artella Drive Client was not initialized. Artella server '
-                'dependant functionality will not be available!')
+        # Initialize Artella Drive client
+        self.init_client()
 
         logger.log_debug('trying to create quit signal ...')
         if qtutils.QT_AVAILABLE:
@@ -101,6 +93,25 @@ class ArtellaDccPlugin(object):
                 logger.log_debug('Impossible to connect because app does not exists')
         else:
             logger.log_debug('Impossible to create signal because qt is not available')
+
+        return True
+
+    def init_client(self):
+        """
+        Initializes Artella Drive Client.
+        :return: True if the Artella Drive client initialization was successful; False otherwise.
+        :rtype: bool
+        """
+
+        artella_drive_client = self._artella_drive_client or self.get_client()
+        if artella_drive_client:
+            artella_drive_client.artella_drive_listen()
+            self.setup_project(artella_drive_client.get_local_root())
+        else:
+            logger.log_warning(
+                'Artella Drive Client was not initialized. Artella server '
+                'dependant functionality will not be available!')
+            return False
 
         return True
 
@@ -119,7 +130,7 @@ class ArtellaDccPlugin(object):
 
         # Finish Artella Drive Client thread
         if self._artella_drive_client:
-            # self._artella_drive_client.artella_drive_disconnect()
+            self._artella_drive_client.artella_drive_disconnect()
             self._artella_drive_client = None
 
         return True
@@ -265,7 +276,27 @@ class ArtellaDccPlugin(object):
         """
 
         if not self._artella_drive_client:
-            return None
+            # TODO: Here we are not taking into account custom extensions (check loader). We should store them
+            # TODO: in an env variable and access them here
+            dcc_extensions = dcc.extensions()
+            artella_drive_client = client.ArtellaDriveClient.get(extensions=dcc_extensions)
+            if not artella_drive_client:
+                self.show_warning_message(
+                    'Local Drive Client not available. Please launch Artella Drive App', 'Artella Drive App')
+                return None
+            else:
+                self._artella_drive_client = artella_drive_client
+                self.init_client()
+        else:
+            if not self._artella_drive_client.is_running:
+                self.init_client()
+
+        if not self._artella_drive_client.is_available:
+            self._artella_drive_client.update_remotes_sessions(show_dialogs=False)
+            if not self._artella_drive_client.is_available:
+                self.show_warning_message(
+                    'Local Drive Client not available. Please launch Artella Drive App', 'Artella Drive App')
+                return None
 
         # The challenge value gets updated when the Artella Drive App restarts.
         # We must check auth each time in case Artella Drive is restarted but Maya didn't
