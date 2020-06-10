@@ -19,7 +19,7 @@ OLD_LOCAL_ROOTS = ['AM_LOCAL_ROOT', 'AM_LOCAL_STORAGE_TOP']
 AED = 'ARTELLA_EXTERNAL_DCCS'
 
 # Defines package namespace where Artella DCC plugins are located
-ARTELLA_DCCS_NAMESPACE = 'artella.dcc'
+ARTELLA_DCCS_NAMESPACE = 'artella.dccs'
 
 # Defines URI scheme used by Artella
 ARTELLA_URI_SCHEME = 'artella'

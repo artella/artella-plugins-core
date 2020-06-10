@@ -24,13 +24,14 @@ def initialize_callbacks():
 
     import artella
     from artella import dcc
+    from artella.core import dcc as dcc_core
 
     shutdown_type = None
     if hasattr(artella.Callbacks, 'ShutdownCallback'):
         shutdown_type = getattr(artella.Callbacks, 'ShutdownCallback')
 
-    for callback_name in dcc.callbacks():
-        callback_type = getattr(dcc.DccCallbacks, callback_name)[1]['type']
+    for callback_name in dcc_core.callbacks():
+        callback_type = getattr(dcc_core.DccCallbacks, callback_name)[1]['type']
         if callback_type == 'simple':
             callback_type = SimpleCallbackWrapper
         elif callback_type == 'filter':

@@ -11,11 +11,11 @@ import os
 import sys
 
 import artella
-from artella import dcc
 from artella import logger
+from artella.core import consts, utils
 
 
-def init(init_client=True, plugin_paths=None, extensions=None, dev=False):
+def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, dev=False):
     """
     Initializes Artella Plugin
 
@@ -25,19 +25,45 @@ def init(init_client=True, plugin_paths=None, extensions=None, dev=False):
     :rtype: bool
     """
 
-    from artella import register
-    from artella.core import dcc as core_dcc
-    from artella.core import client, resource, plugin, qtutils
-    from artella.widgets import theme, color
-
     plugins_path = plugin_paths if plugin_paths is not None else list()
+    dccs_path = dcc_paths if dcc_paths is not None else list()
     extensions = extensions if extensions is not None else list()
 
     # Create logger
     logger.create_logger()
 
+    # Register DCC paths
+    valid_dcc_paths = list()
+    default_dccs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dcc')
+    if default_dccs_path not in dccs_path:
+        dccs_path.append(default_dccs_path)
+    for dcc_path in dcc_paths:
+        if os.path.isdir(dcc_path):
+            if dcc_path not in sys.path:
+                sys.path.append(dcc_path)
+            valid_dcc_paths.append(dcc_path)
+    if valid_dcc_paths:
+        if os.environ.get(consts.AED, None):
+            env = os.environ[consts.AED].split(';')
+            env.extend(valid_dcc_paths)
+            clean_env = list(set([utils.clean_path(pth) for pth in env]))
+            dcc_paths_str = ';'.join(clean_env)
+        else:
+            dcc_paths_str = ';'.join(valid_dcc_paths)
+        os.environ[consts.AED] = dcc_paths_str
+
+    # Once DCC paths are registered we can import modules
+    from artella import register
+    from artella import dcc
+    from artella.core import dcc as dcc_core
+    from artella.core import client, resource, plugin, dccplugin, qtutils
+    from artella.widgets import theme, color
+
     # Make sure that Artella Drive client and DCC are cached during initialization
-    core_dcc.current_dcc()
+    current_dcc = dcc_core.current_dcc()
+    if not current_dcc:
+        logger.log_error('Impossible to load Artella Plugin because no DCC is available!')
+        return False
 
     # Specific DCC extensions are managed by the client
     dcc_extensions = dcc.extensions()
@@ -74,17 +100,14 @@ def shutdown():
     :rtype: bool
     """
 
-    from artella.core import dcc
-    from artella.core import plugin
-
     # Create logger
     logger.create_logger()
 
-    # Make sure that Artella Drive client and DCC are cached during initialization
-    dcc.current_dcc()
-
-    artella.PluginsMgr().shutdown()
-    artella.DccPlugin().shutdown()
+    try:
+        artella.PluginsMgr().shutdown()
+        artella.DccPlugin().shutdown()
+    except Exception as exc:
+        pass
 
     clean_modules()
 
@@ -96,7 +119,7 @@ def clean_modules():
     Clean all loaded modules related with artella from Python modules dictionary
     """
 
-    to_clean = [m for m in sys.modules.keys() if 'artella' in m]
+    to_clean = [m for m in sys.modules.keys() if m.startswith('artella.')]
     for t in to_clean:
         del sys.modules[t]
 
