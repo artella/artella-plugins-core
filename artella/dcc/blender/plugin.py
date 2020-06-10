@@ -13,12 +13,12 @@ import bpy
 
 from artella import logger
 from artella import register
-from artella import plugin as plugin
+from artella.core import dccplugin
 from artella.core.utils import Singleton
 
 
-class ArtellaBlenderPlugin(plugin.ArtellaPlugin, object):
-    def init(self):
+class ArtellaBlenderPlugin(dccplugin.ArtellaDccPlugin, object):
+    def init(self, dev=False):
         """
         Initializes Artella plugin in current DCC
         :return: True if the initialization was successful; False otherwise
@@ -29,7 +29,7 @@ class ArtellaBlenderPlugin(plugin.ArtellaPlugin, object):
 
         addon.register()
 
-        super(ArtellaBlenderPlugin, self).init()
+        super(ArtellaBlenderPlugin, self).init(dev=dev)
 
     def get_version_comment(self, current_file):
         comment = bpy.context.scene.SaveToCloudProps.comment

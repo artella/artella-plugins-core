@@ -17,8 +17,8 @@ class ArtellaMaxPlugin(dccplugin.ArtellaDccPlugin, object):
     def __init__(self, artella_drive_client):
         super(ArtellaMaxPlugin, self).__init__(artella_drive_client=artella_drive_client)
 
-    def init(self):
-        super(ArtellaMaxPlugin, self).init()
+    def init(self, dev=False):
+        super(ArtellaMaxPlugin, self).init(dev=dev)
 
         # Register 3ds Max specific callbacks
         callback.register(artella.Callbacks.ShutdownCallback, self._on_close)

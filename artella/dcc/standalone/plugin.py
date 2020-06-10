@@ -14,8 +14,8 @@ from artella.core.utils import Singleton
 
 class ArtellaStandalonePlugin(dccplugin.ArtellaDccPlugin, object):
 
-    def init(self):
-        super(ArtellaStandalonePlugin, self).init()
+    def init(self, dev=False):
+        super(ArtellaStandalonePlugin, self).init(dev=dev)
 
 
 @Singleton
