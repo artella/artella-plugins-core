@@ -34,7 +34,7 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
 
     # Register DCC paths
     valid_dcc_paths = list()
-    default_dccs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dcc')
+    default_dccs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dccs')
     if default_dccs_path not in dccs_path:
         dccs_path.append(default_dccs_path)
     for dcc_path in dccs_path:
