@@ -15,7 +15,7 @@ from artella import dcc
 from artella import logger
 
 
-def init(init_client=True, plugin_paths=None, extensions=None):
+def init(init_client=True, plugin_paths=None, extensions=None, dev=False):
     """
     Initializes Artella Plugin
 
@@ -43,12 +43,15 @@ def init(init_client=True, plugin_paths=None, extensions=None):
     dcc_extensions = dcc.extensions()
     extensions.extend(dcc_extensions)
 
-    # Create Artella Drive Client
-    artella_drive_client = client.ArtellaDriveClient.get(extensions=extensions) if init_client else None
-
-    # Initialize resources
+    # Initialize resources and theme
     resources_mgr = artella.ResourcesMgr()
     resources_mgr.register_resources_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources'))
+    if qtutils.QT_AVAILABLE:
+        artella_theme = theme.ArtellaTheme(main_color=color.ArtellaColors.DEFAULT)
+        register.register_class('theme', artella_theme)
+
+    # Create Artella Drive Client
+    artella_drive_client = client.ArtellaDriveClient.get(extensions=extensions) if init_client else None
 
     # Load Plugins
     default_plugins_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plugins')
@@ -58,11 +61,7 @@ def init(init_client=True, plugin_paths=None, extensions=None):
     artella.PluginsMgr().load_registered_plugins()
 
     # Initialize Artella DCC plugin
-    artella.DccPlugin(artella_drive_client).init()
-
-    if qtutils.QT_AVAILABLE:
-        artella_theme = theme.ArtellaTheme(main_color=color.ArtellaColors.DEFAULT)
-        register.register_class('theme', artella_theme)
+    artella.DccPlugin(artella_drive_client).init(dev=dev)
 
     return True
 
@@ -87,7 +86,19 @@ def shutdown():
     artella.PluginsMgr().shutdown()
     artella.DccPlugin().shutdown()
 
+    clean_modules()
+
     return True
+
+
+def clean_modules():
+    """
+    Clean all loaded modules related with artella from Python modules dictionary
+    """
+
+    to_clean = [m for m in sys.modules.keys() if 'artella' in m]
+    for t in to_clean:
+        del sys.modules[t]
 
 
 def _reload():
@@ -101,10 +112,6 @@ def _reload():
 
     # We make sure that plugin is shutdown before doing reload
     shutdown()
-
-    to_clean = [m for m in sys.modules.keys() if 'artella' in m]
-    for t in to_clean:
-        del sys.modules[t]
 
     global CURRENT_DCC
     CURRENT_DCC = None
