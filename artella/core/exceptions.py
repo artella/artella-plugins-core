@@ -7,15 +7,18 @@ Module that contains Artella exceptions
 
 from __future__ import print_function, division, absolute_import
 
-from artella import logger
+import logging
+
 from artella.core import qtutils
+
+logger = logging.getLogger('artella')
 
 
 class ArtellaException(Exception):
     def __init__(self, message, title='Artella - Error', *args):
 
         artella_message = 'Artella >>> {}'.format(message)
-        logger.log_error(artella_message)
+        logger.error(artella_message)
 
         super(ArtellaException, self).__init__(artella_message, *args)
 

@@ -9,13 +9,13 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import string
+import logging
 try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
 
 import artella
-from artella import logger
 from artella.core import utils
 
 QT_AVAILABLE = True
@@ -53,6 +53,8 @@ DEFAULT_DPI = 96
 
 if utils.is_python3():
     long = int
+
+logger = logging.getLogger('artella')
 
 
 class StyleTemplate(string.Template):
@@ -148,7 +150,7 @@ def wrapinstance(ptr, base=None):
         base = QtCore.QObject
         return shiboken.wrapinstance(long(ptr), base)
     else:
-        logger.log_error('Failed to wrap object {} ...'.format(ptr))
+        logger.error('Failed to wrap object {} ...'.format(ptr))
         return None
 
 

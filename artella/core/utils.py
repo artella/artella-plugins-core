@@ -15,11 +15,12 @@ import json
 import shutil
 import fnmatch
 import inspect
+import logging
 import importlib
 import subprocess
 from functools import wraps
 
-from artella import logger
+logger = logging.getLogger('artella')
 
 
 def is_python2():
@@ -199,14 +200,18 @@ def delete_file(file_path):
     """
 
     if not os.path.isfile(file_path):
-        logger.log_warning('File "{}" was not deleted.'.format(file_path))
+        logger.warning('File "{}" was not deleted.'.format(file_path))
         return False
 
     try:
         get_permission(file_path)
     except Exception:
         pass
-    os.remove(file_path)
+
+    try:
+        os.remove(file_path)
+    except Exception as exc:
+        pass
 
     if os.path.isfile(file_path):
         return False
@@ -239,7 +244,7 @@ def delete_folder(folder_name, directory=None):
     try:
         shutil.rmtree(full_path, onerror=delete_read_only_error)
     except Exception as exc:
-        logger.log_warning('Could not remove folder "{}" | {}'.format(full_path, exc))
+        logger.warning('Could not remove folder "{}" | {}'.format(full_path, exc))
 
     return full_path
 
@@ -293,7 +298,7 @@ def import_module(module_path, name=None):
                 raise ValueError('Cannot find module path: "{}"'.format(module_path))
         return imp.load_source(name, os.path.realpath(module_path))
     except ImportError:
-        logger.log_error('Failed to load module: "{}"'.format(module_path))
+        logger.error('Failed to load module: "{}"'.format(module_path))
         return None
 
 
@@ -381,7 +386,7 @@ def read_json(filename):
             with open(filename, 'r') as json_file:
                 data = json.load(json_file)
         except Exception as err:
-            logger.log_warning('Could not read {0}'.format(filename))
+            logger.warning('Could not read {0}'.format(filename))
             raise err
 
     return data
@@ -404,7 +409,7 @@ def timestamp(f):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         res = f(*args, **kwargs)
-        logger.log_warning('<{}> Elapsed time : {}'.format(f.func_name, time.time() - start_time))
+        logger.warning('<{}> Elapsed time : {}'.format(f.func_name, time.time() - start_time))
         return res
     return wrapper
 

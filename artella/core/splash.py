@@ -7,12 +7,15 @@ Module that contains Artella Splash widget
 
 from __future__ import print_function, division, absolute_import
 
+import logging
+
 import artella
-from artella import logger
 from artella.core import qtutils, utils
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets, QtGui
+
+logger = logging.getLogger('artella')
 
 
 if not qtutils.QT_AVAILABLE:
@@ -227,4 +230,4 @@ class ProgressSplashDialog(SplashDialog, object):
          Internal function that logs current progress into DCC output window
          """
 
-        logger.log_debug('{} - {}'.format(self._progress_text.text(), self._progress.value()))
+        logger.debug('{} - {}'.format(self._progress_text.text(), self._progress.value()))

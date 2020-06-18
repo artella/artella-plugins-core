@@ -11,7 +11,8 @@ import os
 import sys
 
 import artella
-from artella import logger
+from artella import logger as logger
+import artella.register as register
 from artella.core import consts, utils
 
 
@@ -53,8 +54,10 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
         os.environ[consts.AED] = dcc_paths_str
 
     # Once DCC paths are registered we can import modules
-    from artella import register
-    from artella import dcc
+    import artella
+    import artella.register as register
+    import artella.dcc as dcc
+
     from artella.core import dcc as dcc_core
     from artella.core import client, resource, plugin, dccplugin, qtutils
     from artella.widgets import theme, color
@@ -62,7 +65,7 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
     # Make sure that Artella Drive client and DCC are cached during initialization
     current_dcc = dcc_core.current_dcc()
     if not current_dcc:
-        logger.log_error('Impossible to load Artella Plugin because no DCC is available!')
+        logger.error('Impossible to load Artella Plugin because no DCC is available!')
         return False
 
     # Specific DCC extensions are managed by the client
@@ -109,19 +112,9 @@ def shutdown():
     except Exception as exc:
         pass
 
-    clean_modules()
+    register.cleanup()
 
     return True
-
-
-def clean_modules():
-    """
-    Clean all loaded modules related with artella from Python modules dictionary
-    """
-
-    to_clean = [m for m in sys.modules.keys() if m.startswith('artella.')]
-    for t in to_clean:
-        del sys.modules[t]
 
 
 def _reload():
@@ -135,6 +128,12 @@ def _reload():
 
     # We make sure that plugin is shutdown before doing reload
     shutdown()
+
+    # Cleanup artella modules
+    modules_to_reload = ('artella.')
+    for k in sys.modules.keys():
+        if k.startswith(modules_to_reload):
+            del sys.modules[k]
 
     global CURRENT_DCC
     CURRENT_DCC = None

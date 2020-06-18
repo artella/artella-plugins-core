@@ -8,12 +8,13 @@ Module that contains core callback functionality
 from __future__ import print_function, division, absolute_import
 
 import inspect
+import logging
 import traceback
-
-from artella import logger
 
 # Cache used to store Artella callbacks
 ARTELLA_CALLBACKS_CACHE = dict()
+
+logger = logging.getLogger('artella')
 
 
 def initialize_callbacks():
@@ -41,7 +42,7 @@ def initialize_callbacks():
 
         callback_class = getattr(artella.Callbacks, '{}Callback'.format(callback_name), None)
         if not callback_class:
-            logger.log_warning(
+            logger.warning(
                 'Dcc {} does not provides a Callback implementation for {}Callback. Skipping ...'.format(
                     dcc.name(), callback_name))
             continue
@@ -54,7 +55,7 @@ def initialize_callbacks():
 
         ARTELLA_CALLBACKS_CACHE[callback_name] = callback_type(callback_class, shutdown_type)
 
-        logger.log_debug('Creating Callback: {} | {}'.format(callback_name, callback_class))
+        logger.debug('Creating Callback: {} | {}'.format(callback_name, callback_class))
 
 
 def register(callback_type, fn):
@@ -367,15 +368,15 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
         """
 
         entry = next((e for e in self._registry if e.callback == fn), None)
-        logger.log_debug(
+        logger.debug(
             'Started: ({}) {} Register - fn:"{}", entry:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), str(entry)))
         if not entry:
             token = self._connect(fn) if self.connected else None
-            logger.log_debug(
+            logger.debug(
                 '({}) {} Register - token:"{}"'.format(str(self._notifier), self.__class__.__name__, str(token)))
             self._registry.append(SimpleCallbackWrapper.RegistryEntry(fn, token))
-        logger.log_debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
 
     def unregister(self, fn):
         """
@@ -385,28 +386,28 @@ class SimpleCallbackWrapper(CallbackWrapper, object):
         """
 
         entry = next((e for e in self._registry if e.callback == fn), None)
-        logger.log_debug(
+        logger.debug(
             'Started: ({}) {} Unregister - fn:"{}", entry:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), str(entry)))
         if entry:
             self._disconnect(entry.token)
             self._registry.remove(entry)
-        logger.log_debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
 
     def _shutdown(self, *args):
         """
         Forces an unregistering from the notifier
         """
 
-        logger.log_debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
         for entry in self._registry:
-            logger.log_debug(
+            logger.debug(
                 '{}._shutdown - Disconnecting ({}) {}'.format(str(self._notifier), self.__class__.__name__, str(entry)))
             self._disconnect(entry.token)
         del self._registry[:]
 
         super(SimpleCallbackWrapper, self)._shutdown(*args)
-        logger.log_debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
 
 
 class FilterCallbackWrapper(CallbackWrapper, object):
@@ -473,14 +474,14 @@ class FilterCallbackWrapper(CallbackWrapper, object):
         Forces an unregistering from the notifier
         """
 
-        logger.log_debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Started: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
         if self._token:
             self._token = self._disconnect(self._token)
             self._token = None
         del self._registry[:]
 
         super(self.__class__, self)._shutdown(*args)
-        logger.log_debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Complete: ({}) {} Shutdown'.format(str(self._notifier), self.__class__.__name__))
 
     def _notify(self, *args):
         """
@@ -516,15 +517,15 @@ class FilterCallbackWrapper(CallbackWrapper, object):
         :param fn: a valid Python function with a variable number of arguments (exp. *args)
         """
 
-        logger.log_debug(
+        logger.debug(
             'Started: ({}) {} Register - fn:"{}", IsEmpty:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), bool(self.empty)))
         if self.empty:
             self._token = self._connect(self._notify)
-            logger.log_debug(
+            logger.debug(
                 '({}) {} Register - token:"{}"'.format(str(self._notifier), self.__class__.__name__, str(self._token)))
         self._registry.append(FilterCallbackWrapper.RegistryEntry(fn))
-        logger.log_debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Completed: ({}) {} Register'.format(str(self._notifier), self.__class__.__name__))
 
     def unregister(self, fn):
         """
@@ -534,7 +535,7 @@ class FilterCallbackWrapper(CallbackWrapper, object):
         """
 
         entry = next((e for e in self._registry if e.callback == fn), None)
-        logger.log_debug(
+        logger.debug(
             'Started: ({}) {} Unregister - fn:"{}", IsEmpty:"{}"'.format(
                 str(self._notifier), self.__class__.__name__, str(fn), bool(self.empty)))
 
@@ -542,7 +543,7 @@ class FilterCallbackWrapper(CallbackWrapper, object):
             self._registry.remove(entry)
 
         if self.empty and self.connected:
-            logger.log_debug(
+            logger.debug(
                 '({}) {} Unregister token:"{}"'.format(str(self._notifier), self.__class__.__name__, str(self._token)))
             self._token = self._disconnect(self._token)
-        logger.log_debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))
+        logger.debug('Completed: ({}) {} Unregister'.format(str(self._notifier), self.__class__.__name__))

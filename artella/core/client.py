@@ -15,6 +15,7 @@ import socket
 import base64
 import random
 import hashlib
+import logging
 import threading
 from collections import OrderedDict
 try:
@@ -27,8 +28,9 @@ except ImportError:
     from urllib2 import urlopen, Request, HTTPError, URLError
 
 import artella
-from artella import logger
 from artella.core import consts, utils, exceptions
+
+logger = logging.getLogger('artella')
 
 
 class ArtellaDriveClient(object):
@@ -101,7 +103,7 @@ class ArtellaDriveClient(object):
         # We need to check this each time in case the local server got restarted
         auth_header = artella_client.update_auth_challenge()
         if not auth_header:
-            logger.log_warning('Local Artella Drive is not available. Please launch Artella Drive App.')
+            logger.warning('Local Artella Drive is not available. Please launch Artella Drive App.')
             return None
 
         # Updates the list of available remotes
@@ -152,13 +154,13 @@ class ArtellaDriveClient(object):
         if not ArtellaDriveClient._challenge_path:
             rsp = self.get_challenge_file_path()
             if not rsp or 'error' in rsp:
-                logger.log_error('Unable to get challenge file path "{}"'.format(rsp))
+                logger.error('Unable to get challenge file path "{}"'.format(rsp))
                 self._auth_header = None
                 return self._auth_header
             ArtellaDriveClient._challenge_path = rsp.get('challenge_file_path')
 
         if not os.path.exists(ArtellaDriveClient._challenge_path):
-            logger.log_error('Challenge file not found: "{}"'.format(ArtellaDriveClient._challenge_path))
+            logger.error('Challenge file not found: "{}"'.format(ArtellaDriveClient._challenge_path))
             self._auth_header = None
             return self._auth_header
 
@@ -204,14 +206,14 @@ class ArtellaDriveClient(object):
             rsp = self.ping()
             if 'error' in rsp:
                 msg = 'Attempting to retrieve remote sessions: "{}" '.format(rsp.get('error'))
-                logger.log_error(msg)
+                logger.error(msg)
             self._remote_sessions = rsp.get('remote_sessions', list())
 
         utils.clear_list(self._remote_sessions)
 
         if not self.update_auth_challenge():
             msg = 'Unable to authenticate to Artella Drive App.'
-            logger.log_error(msg)
+            logger.error(msg)
             dcc.show_error('Artella - Authentication error', msg)
             return
 
@@ -223,7 +225,7 @@ class ArtellaDriveClient(object):
             _ping_remote_sessions()
             if not self._remote_sessions:
                 msg = 'No remote sessions available. Please visit your Project Drive in Artella Web App and try again!'
-                logger.log_error(msg)
+                logger.error(msg)
                 if show_dialogs:
                     dcc.show_error('Artella - Remote Sessions not available', msg)
 
@@ -289,7 +291,7 @@ class ArtellaDriveClient(object):
 
         local_root = self.get_local_root()
         if not local_root or not os.path.isdir(local_root):
-            logger.log_warning(
+            logger.warning(
                 'Impossible to retrieve current available projects because local root is not valid: {}'.format(
                     local_root))
             return list()
@@ -352,19 +354,19 @@ class ArtellaDriveClient(object):
 
         remote_projects = self.get_remote_projects()
         if not remote_projects:
-            logger.log_warning('No remote projects available to search project name for: "{}"'.format(project_id))
+            logger.warning('No remote projects available to search project name for: "{}"'.format(project_id))
             return ''
 
         project_name = ''
         if remote_session:
             if remote_session not in remote_projects:
-                logger.log_warning(
+                logger.warning(
                     'Given remote session: "{}" is not available. Impossible to retrieve name for project: "{}"'.format(
                         remote_session, project_id))
                 return project_name
 
             if project_id not in remote_projects[remote_session]:
-                logger.log_warning('Project ID "{}" not found in remote session: "{}"'.format(
+                logger.warning('Project ID "{}" not found in remote session: "{}"'.format(
                     project_id, remote_session))
                 return project_name
 
@@ -378,7 +380,7 @@ class ArtellaDriveClient(object):
                     break
 
         if not project_name:
-            logger.log_warning('No project name found for project: "{}"'.format(project_id))
+            logger.warning('No project name found for project: "{}"'.format(project_id))
 
         return project_name
 
@@ -407,13 +409,13 @@ class ArtellaDriveClient(object):
         if not local_root or (isinstance(local_root, dict) and 'error' in local_root):
             alr = os.environ.get(consts.ALR, None)
             if alr:
-                logger.log_warning('Unable to get local storage root. Using env var instead: "{}"'.format(consts.ALR))
+                logger.warning('Unable to get local storage root. Using env var instead: "{}"'.format(consts.ALR))
                 local_root = alr
             else:
-                logger.log_error('Unable to get local storage root.')
-                logger.log_info(
+                logger.error('Unable to get local storage root.')
+                logger.info(
                     'Check that the local Artella Drive service is running and you have a working internet connection.')
-                logger.log_info(
+                logger.info(
                     'To work offline set the "{}" environment variable to the proper local project directory'.format(
                         consts.ALR))
         else:
@@ -463,7 +465,7 @@ class ArtellaDriveClient(object):
         req.add_header('Content-Type', 'application/json')
         rsp = self._communicate(req, json.dumps(payload).encode())
         if 'error' in rsp:
-            logger.log_error('Attempting to resolve "{}" "{}"'.format(path, rsp.get('error')))
+            logger.error('Attempting to resolve "{}" "{}"'.format(path, rsp.get('error')))
 
         return rsp
 
@@ -512,11 +514,11 @@ class ArtellaDriveClient(object):
 
         rsp = self.resolve_path(translated_path)
         if 'error' in rsp:
-            logger.log_warning('Error while resolving translated file path: "{}"!'.format(path))
+            logger.warning('Error while resolving translated file path: "{}"!'.format(path))
             return path
 
         if not translated_path.startswith(local_root):
-            logger.log_warning('Was not possible to translate file path: "{}"!'.format(path))
+            logger.warning('Was not possible to translate file path: "{}"!'.format(path))
             return path
 
         return translated_path
@@ -607,16 +609,16 @@ class ArtellaDriveClient(object):
 
         local_projects = self.get_local_projects() or dict()
         if not local_projects:
-            logger.log_warning('No local projects available to retrieve project ID from path!')
+            logger.warning('No local projects available to retrieve project ID from path!')
             return None
 
         project_name = self.project_name_from_path(file_path)
         if not project_name:
-            logger.log_warning('Was not possible to retrieve Project ID from path: {}!'.format(file_path))
+            logger.warning('Was not possible to retrieve Project ID from path: {}!'.format(file_path))
             return None
 
         if project_name not in local_projects.keys():
-            logger.log_warning(
+            logger.warning(
                 'Was not possible to retrieve Project ID from path because project "{}" is not recognized!'.format(
                     project_name))
             return None
@@ -675,7 +677,7 @@ class ArtellaDriveClient(object):
         """
 
         if not self.get_remote_sessions(update=True):
-            logger.log_warning(
+            logger.warning(
                 'No remote sessions available. Artella App Drive status call aborted.')
             return dict()
 
@@ -690,7 +692,7 @@ class ArtellaDriveClient(object):
                 self._host, self._port, params))
             rsp = self._communicate(req)
             if 'error' in rsp:
-                logger.log_error(
+                logger.error(
                     'Attempting to retrieve status "{}" "{}"'.format(
                         uri_path.encode(), rsp.get('error').encode('utf-8')))
                 continue
@@ -726,7 +728,7 @@ class ArtellaDriveClient(object):
         handles = path_handle_map.values()
         if not path_handle_map or not handles:
             return dict()
-        logger.log_debug('Handles: "{}"'.format(handles))
+        logger.debug('Handles: "{}"'.format(handles))
 
         payload = {
             'handles': handles,
@@ -739,7 +741,7 @@ class ArtellaDriveClient(object):
         req = Request('http://{}:{}/v2/localserve/transfer/download'.format(self._host, self._port))
         rsp = self._communicate(req, json.dumps(payload).encode())
         if 'error' in rsp:
-            logger.log_warning(
+            logger.warning(
                 'Unable to download file paths "{}" "{}"'.format(path_handle_map.keys(), rsp.get('error')))
             return rsp
 
@@ -822,7 +824,7 @@ class ArtellaDriveClient(object):
         handles = list(path_handle_map.values())
         if not path_handle_map or not handles:
             return dict()
-        logger.log_debug('Handles: "{}"'.format(handles))
+        logger.debug('Handles: "{}"'.format(handles))
 
         payload = {
             'handles': handles,
@@ -834,7 +836,7 @@ class ArtellaDriveClient(object):
 
         rsp = self._communicate(req, json.dumps(payload).encode())
         if 'error' in rsp:
-            logger.log_warning(
+            logger.warning(
                 'Unable to upload file paths "{}" "{}"'.format(path_handle_map.keys(), rsp.get('error')))
             return rsp
 
@@ -867,10 +869,10 @@ class ArtellaDriveClient(object):
             rsp = self._communicate(req, json.dumps(payload), method='POST')
             if isinstance(rsp, dict):
                 if 'error' in rsp:
-                    logger.log_error('Unable to lock file path "{}" "{}"'.format(file_path, rsp.get('error')))
+                    logger.error('Unable to lock file path "{}" "{}"'.format(file_path, rsp.get('error')))
                     return False
             else:
-                logger.log_error('Unable to lock file path "{}" "{}"'.format(file_path, rsp))
+                logger.error('Unable to lock file path "{}" "{}"'.format(file_path, rsp))
                 return False
 
             result[file_path] = rsp.get('response', False) and rsp.get('status_code', 0) == 200
@@ -897,7 +899,7 @@ class ArtellaDriveClient(object):
             req.add_header('Content-Type', 'application/json')
             rsp = self._communicate(req, json.dumps(payload).encode(), method='DELETE')
             if 'error' in rsp:
-                logger.log_error('Unable to unlock file path "{}" "{}"'.format(file_path, rsp.get('error')))
+                logger.error('Unable to unlock file path "{}" "{}"'.format(file_path, rsp.get('error')))
                 return False
 
             if isinstance(rsp, dict):
@@ -983,7 +985,7 @@ class ArtellaDriveClient(object):
 
         is_locked, is_locked_by_me, is_locked_by_name, remote_record_found = self.check_lock(file_path)
         if not remote_record_found:
-            logger.log_info('File "{}" is not versioned yet. No need to lock'.format(file_path))
+            logger.info('File "{}" is not versioned yet. No need to lock'.format(file_path))
             return True
 
         if not is_locked or (is_locked and is_locked_by_me):
@@ -1012,7 +1014,7 @@ class ArtellaDriveClient(object):
         req.add_header('Content-Type', 'application/json')
         rsp = self._communicate(req, json.dumps(payload).encode(), method='GET')
         if 'error' in rsp:
-            logger.log_error('Unable to check lock status for file path "{}" "{}"'.format(file_path, rsp.get('error')))
+            logger.error('Unable to check lock status for file path "{}" "{}"'.format(file_path, rsp.get('error')))
             return False, False, '', False
 
         is_locked = rsp.get('is_locked', False)
@@ -1084,12 +1086,12 @@ class ArtellaDriveClient(object):
         """
 
         server_address = (self._host, self._port)
-        logger.log_info('Connecting to Artella Drive App web socket: {}'.format(server_address))
+        logger.info('Connecting to Artella Drive App web socket: {}'.format(server_address))
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(server_address)
         except Exception as exc:
-            logger.log_error('Artella Plugin failed to connect to the Artella Drive App web socket: {}'.format(exc))
+            logger.error('Artella Plugin failed to connect to the Artella Drive App web socket: {}'.format(exc))
             return
 
         self.artella_drive_send_request(sock)
@@ -1100,22 +1102,24 @@ class ArtellaDriveClient(object):
         return rsp
 
     def artella_drive_disconnect(self):
-        logger.log_debug('Disconnecting Artella Drive Client ...')
+        logger.debug('Disconnecting Artella Drive Client ...')
         self._running = False
+
+        self._disconnect()
 
         return True
 
     def artella_drive_listen(self):
         self.artella_drive_connect()
         if not self._socket_buffer:
-            logger.log_error('Socket to Artella Drive not connected.')
+            logger.error('Socket to Artella Drive not connected.')
             return
         self._client_thread = threading.Thread(target=self._pull_messages,).start()
 
     def artella_drive_send_request(self, sock):
 
         if not self.update_auth_challenge():
-            logger.log_error('Unable to authenticate to Artella Drive App.')
+            logger.error('Unable to authenticate to Artella Drive App.')
             return
 
         extensions_str = ''
@@ -1142,19 +1146,19 @@ class ArtellaDriveClient(object):
             'Authorization: {}'.format(self._auth_header),
         ]
         rr = consts.CRLF.join(r) + consts.CRLF + consts.CRLF
-        logger.log_debug(
+        logger.debug(
             'Artella Plugin sending websocket access request to the local Artella Drive App: {}'.format(r))
 
         try:
             sock.sendall(rr.encode())
         except Exception as exc:
-            logger.log_warning('Was not possible to send request to Artella Drive App: {}'.format(exc))
+            logger.warning('Was not possible to send request to Artella Drive App: {}'.format(exc))
             return False
 
         return True
 
     def artella_drive_read_response(self):
-        logger.log_debug('Reading socket response ...')
+        logger.debug('Reading socket response ...')
         line = ''
         while line != consts.CRLF:
             line = self._socket_buffer.read_line()
@@ -1177,15 +1181,15 @@ class ArtellaDriveClient(object):
             If the call is not valid, a dictionary containing the url and error message is returned.
         """
 
-        logger.log_debug('Making request to Artella Drive "{}"'.format(req.get_full_url()))
+        logger.debug('Making request to Artella Drive "{}"'.format(req.get_full_url()))
         if data:
-            logger.log_debug('Request payload dump: "{}" | {}'.format(json.loads(data), type(data)))
+            logger.debug('Request payload dump: "{}" | {}'.format(json.loads(data), type(data)))
 
         if not self._auth_header and not skip_auth:
             rsp = self.update_auth_challenge()
             if not rsp:
                 msg = 'Unable to authenticate'
-                logger.log_error(msg)
+                logger.error(msg)
                 return {'error': msg, 'url': req.get_full_url()}
 
         req.add_header('Authorization', self._auth_header)
@@ -1200,8 +1204,8 @@ class ArtellaDriveClient(object):
                 msg = 'ArtellaDrive is unable to fulfill the request "{}"'.format(exc.code)
             else:
                 msg = exc
-            logger.log_debug(exc)
-            logger.log_error(msg)
+            logger.debug(exc)
+            logger.error(msg)
             return {'error': msg, 'url': req.get_full_url()}
         else:
             raw_data = rsp.read()
@@ -1212,13 +1216,13 @@ class ArtellaDriveClient(object):
                     raw_data = "".join(chr(x) for x in bytearray(raw_data))
                     json_data = json.loads(raw_data)
                 except ValueError:
-                    logger.log_debug('ArtellaDrive data response: "{}"'.format(raw_data))
+                    logger.debug('ArtellaDrive data response: "{}"'.format(raw_data))
                     return raw_data
                 except Exception as exc:
-                    logger.log_error(exc)
+                    logger.error(exc)
                     return raw_data
                 else:
-                    logger.log_debug('ArtellaDriver JSON response: "{}"'.format(json_data))
+                    logger.debug('ArtellaDriver JSON response: "{}"'.format(json_data))
                     return json_data
 
     def _disconnect(self):
@@ -1235,8 +1239,8 @@ class ArtellaDriveClient(object):
                 self._socket_buffer = None
                 self._running = False
         except Exception as exc:
-            logger.log_error(
-                'Error while disconnect Artella Plugin from Artelal Drive App web socket ... {}'.format(exc))
+            logger.error(
+                'Error while disconnect Artella Plugin from Artella Drive App web socket ... {}'.format(exc))
             return False
 
         return True
@@ -1257,7 +1261,7 @@ class ArtellaDriveClient(object):
         return rsp
 
     def _pull_messages(self):
-        logger.log_debug('Listening for commands on websocket')
+        logger.debug('Listening for commands on websocket')
         while self._running:
             try:
                 msg = self._get_message()
@@ -1267,16 +1271,18 @@ class ArtellaDriveClient(object):
                     if exc.errno == 10054:
                         self._disconnect()
                 except Exception as exc:
-                    pass
-                logger.log_debug(str(exc))
+                    try:
+                        logger.debug(str(exc))
+                    except Exception as exc:
+                        pass
                 continue
 
             self._available = True
-            logger.log_debug('Message received: {}'.format(msg))
+            logger.debug('Message received: {}'.format(msg))
             artella.DccPlugin().pass_message(msg)
 
         # If Artella Drive Client is nor running we force disconnection
-        self._disconnect()
+        # self._disconnect()
 
     def _get_message(self):
         op_code = ord(self._socket_buffer.get_char())
@@ -1411,14 +1417,14 @@ def paths_to_uri(paths):
         full_path = os.path.abspath(os.path.expandvars(os.path.expanduser(pth)))
         rsp = ArtellaDriveClient.get().resolve_path(full_path)
         if 'error' in rsp:
-            logger.log_warning('Unable to translate path "{}" "{}"'.format(pth, rsp.get('error')))
+            logger.warning('Unable to translate path "{}" "{}"'.format(pth, rsp.get('error')))
             fixed_paths.append(pth)
             continue
 
         url_parts = (consts.ARTELLA_URI_SCHEME, '', rsp.get('handle'), '', '', '')
         fixed_path = urlunparse(url_parts)
         if not is_uri_path(fixed_path):
-            logger.log_error('Failed to translate "{}" to URI: "{}"'.format(pth, fixed_path))
+            logger.error('Failed to translate "{}" to URI: "{}"'.format(pth, fixed_path))
             fixed_paths.append(pth)
             continue
 

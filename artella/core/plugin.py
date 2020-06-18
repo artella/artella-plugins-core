@@ -9,13 +9,15 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
+import logging
 import inspect
 
 import artella
-from artella import dcc
-from artella import logger
-from artella import register
+import artella.dcc as dcc
+import artella.register as register
 from artella.core import consts, utils
+
+logger = logging.getLogger('artella')
 
 
 class ArtellaPlugin(object):
@@ -49,7 +51,7 @@ class ArtellaPlugin(object):
         """
 
         if self._loaded:
-            self.cleanup()
+            dcc.execute_deferred(self.cleanup)
 
         dcc.execute_deferred(self.init_ui)
 
@@ -282,7 +284,7 @@ class ArtellaPluginsManager(object):
         plugin_paths = list(set([
             utils.clean_path(plugin_path) for plugin_path in self._plugin_paths if os.path.isdir(plugin_path)]))
         if not plugin_paths:
-            logger.log_info('No Artella Plugins found to load!')
+            logger.info('No Artella Plugins found to load!')
             return
 
         found_paths = dict()
@@ -297,7 +299,7 @@ class ArtellaPluginsManager(object):
                     sys.path.append(clean_path)
 
         if not found_paths:
-            logger.log_info('No plugins found in registered plugin paths: {}'.format(self._plugin_paths))
+            logger.info('No plugins found in registered plugin paths: {}'.format(self._plugin_paths))
             return
 
         for plugin_path, plugin_config in found_paths.items():
@@ -330,7 +332,7 @@ class ArtellaPluginsManager(object):
             try:
                 sub_module_obj = utils.import_module(module_path)
             except Exception as exc:
-                logger.log_error('Error while importing Artella Plugin module: {} | {}'.format(module_path, exc))
+                logger.error('Error while importing Artella Plugin module: {} | {}'.format(module_path, exc))
                 continue
             if not sub_module_obj:
                 continue
@@ -339,7 +341,7 @@ class ArtellaPluginsManager(object):
                 self.register_plugin(member[1], plugin_config)
 
         if not self._plugins:
-            logger.log_warning('No Artella plugins found to load!')
+            logger.warning('No Artella plugins found to load!')
             return
 
         ordered_plugins_list = list()
@@ -364,7 +366,7 @@ class ArtellaPluginsManager(object):
             try:
                 plugin_inst = plugin_class(plugin_config_dict, manager=self)
             except Exception as exc:
-                logger.log_error('Impossible to instantiate Artella Plugin: "{}" | {}'.format(plugin_id, exc))
+                logger.error('Impossible to instantiate Artella Plugin: "{}" | {}'.format(plugin_id, exc))
                 continue
             self._plugins[plugin_id]['plugin_instance'] = plugin_inst
 
@@ -378,7 +380,7 @@ class ArtellaPluginsManager(object):
         """
 
         if not config_path or not os.path.isfile(config_path):
-            logger.log_warning(
+            logger.warning(
                 'Impossible to register Artella Plugin: {} because its config file does not exists: {}!'.format(
                     class_obj, config_path))
             return True
@@ -392,13 +394,13 @@ class ArtellaPluginsManager(object):
         if not plugin_id:
             plugin_id = class_obj.__name__
         if plugin_id in self._plugins:
-            logger.log_warning('Artella Plugin: "{}" already registered!'.format(plugin_id))
+            logger.warning('Artella Plugin: "{}" already registered!'.format(plugin_id))
             return True
 
         try:
             plugin_config = utils.read_json(config_path)
         except Exception as exc:
-            logger.log_warning(
+            logger.warning(
                 'Artella Plugin "{}" configuration file "{}" has not a proper structure. Skipping plugin ...'.format(
                     plugin_id, config_path))
             return True
@@ -416,7 +418,7 @@ class ArtellaPluginsManager(object):
             'config': plugin_config
         }
 
-        logger.log_info('Artella Plugin: "{}" registered successfully!'.format(plugin_id))
+        logger.info('Artella Plugin: "{}" registered successfully!'.format(plugin_id))
 
         return True
 
@@ -432,7 +434,7 @@ class ArtellaPluginsManager(object):
             plugin_inst = plugin_dict.get('plugin_instance', None)
             if not plugin_inst:
                 continue
-            plugin_inst.cleanup()
+            dcc.execute_deferred(plugin_inst.cleanup)
 
 
 @utils.Singleton

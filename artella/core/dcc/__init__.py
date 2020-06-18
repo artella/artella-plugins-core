@@ -9,11 +9,13 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
+import logging
 from functools import wraps
 from importlib import import_module
 
-from artella import logger
 from artella.core import consts, utils
+
+logger = logging.getLogger('artella')
 
 # Directories where DCCs implementations are located.
 DCCS_DIRS = list()
@@ -84,7 +86,7 @@ def current_dcc():
                 dcc_module_name = '{}.{}'.format(consts.ARTELLA_DCCS_NAMESPACE, dcc)
                 import_module(dcc_module_name)
                 CURRENT_DCC = dcc
-                logger.log_info('Current DCC: {}'.format(CURRENT_DCC))
+                logger.info('Current DCC: {}'.format(CURRENT_DCC))
                 return CURRENT_DCC
             except ImportError as exc:
                 continue
@@ -106,6 +108,8 @@ def reroute(fn):
         global DCC_REROUTE_CACHE
 
         dcc = current_dcc()
+        if not dcc:
+            return None
 
         # From the current function and DCC we retrieve module path where DCC implementation should be located
         fn_split = fn.__module__.split('.')
