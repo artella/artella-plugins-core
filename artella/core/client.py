@@ -1487,7 +1487,6 @@ def paths_to_handles(paths, as_dict=False):
 
 
 if __name__ == '__main__':
-    pass
 
     from artella import loader
     loader.init()

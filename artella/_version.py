@@ -41,8 +41,8 @@ def get_config():
     cfg = VersioneerConfig()
     cfg.VCS = "git"
     cfg.style = "pep440"
-    cfg.tag_prefix = ""
-    cfg.parentdir_prefix = ""
+    cfg.tag_prefix = "releases/"
+    cfg.parentdir_prefix = "releases/"
     cfg.versionfile_source = "artella/_version.py"
     cfg.verbose = False
     return cfg
