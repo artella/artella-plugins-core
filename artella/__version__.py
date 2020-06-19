@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Version module for tpDcc-core
+Version module for artella-plugins-core
 """
 
 from __future__ import print_function, division, absolute_import
