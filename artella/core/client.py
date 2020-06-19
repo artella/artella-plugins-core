@@ -1493,37 +1493,4 @@ if __name__ == '__main__':
     loader.init()
 
     artella_cli = ArtellaDriveClient.get()
-    # print(artella_cli.ping())
-
-    # print(artella_cli.get_remote_sessions())
-    # print(artella_cli.get_challenge_file_path())
-    # print(artella_cli.get_local_root())
-    # print(artella_cli.get_remote_projects())
-    # print(artella_cli.get_local_projects())
-    # print(artella_cli.get_project_name('project__zbqo7qqkfryiss6abms6xyulnm'))
-    # print(artella_cli.get_project_name(
-    #     'project__zbqo7qqkfryiss6abms6xyssulnm', remote_session='https://demo-api.artella.com'))
-    # print(artella_cli.get_storage_id())
-    # print(artella_cli.get_metadata())
-    #
-    # artella_cli.download(r'C:/Users/Tomi/artella-files/Crucible/Assets/Characters/Stella/textures/stella_body_anim_color.tga')
-    # print(artella_cli.download([
-    #     r"C:/Users/Tomi/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma",
-    #     r"C:/Users/Tomi/artella-files/Crucible/Assets/Characters/Stella/textures/stella_body_anim_color.tga"
-    # ]
-    # ))
-
-    # print(artella_cli.status(r"C:/Users/Tomi/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma"))
-    # print(artella_cli.status(r"C:/Users/Tomi/artella-files/Crucible/Assets/Characters/Stella/textures/stella_body_anim_color.tga"))
-    # print(artella_cli.download([r"C:/Users/Tomi/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma",]))
-
-    # print(artella_cli.translate_path_to_local(r"C:/Users/Bobby/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma"))
-    # print(artella_cli.project_id_from_path(r"C:/Users/Tomi/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma"))
-    # print(path_to_handle(r"C:/Users/Bobby/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma"))
-    # print(artella_cli.resolve(r"C:/Users/Bobby/artella-files//Crucible/Assets/Characters/Stella/Model/stella_shot_ready_anim.ma"))
-
-    # file_path = r'C:\Users\Tomi\artella-files\Rambutan\Plug-ins\sphere.blend'
-    #file_path = r'C:\Users\Tomi\artella-files\Rambutan\Plug-ins\Area.png'
-    # print(artella_cli.status(file_path))
-    # print(artella_cli.file_is_locked(file_path))
-    # artella_cli.upload(file_path)
+    print(artella_cli.ping())
