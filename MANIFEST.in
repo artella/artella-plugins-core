@@ -1,0 +1,5 @@
+include artella/logging.ini
+include versioneer.py
+include artella/_version.py
+recursive-include artella/resources/* *.*
+recursive-exclude * *.py[co]
