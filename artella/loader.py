@@ -22,6 +22,10 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
 
     :param bool init_client: Whether or not Artella Drive Client should be initialized during initialization.
         Useful to avoid to connect to Artella client when developing DCC specific functionality.
+    :param list(str) plugin_paths: List of paths where Artella plugins can be located
+    :param list(str) dcc_paths: List of paths where Artella DCC implementations can be located
+    :param list(str) extensions: List of extensions to register
+    :param bool dev: Whether or not initialization should be done in dev mode
     :return: True if Artella initialization was successful; False otherwise.
     :rtype: bool
     """
@@ -95,7 +99,7 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
     return True
 
 
-def shutdown():
+def shutdown(dev=False):
     """
     Shutdown Artella Plugin
 
@@ -107,8 +111,8 @@ def shutdown():
     logger.create_logger()
 
     try:
-        artella.PluginsMgr().shutdown()
-        artella.DccPlugin().shutdown()
+        artella.PluginsMgr().shutdown(dev=dev)
+        artella.DccPlugin().shutdown(dev=dev)
     except Exception as exc:
         pass
 
@@ -117,7 +121,7 @@ def shutdown():
     return True
 
 
-def _reload():
+def _reload(dev=False):
     """
     Function to be used during development. Can be used to "reload" Artella modules.
     Useful when working inside DCC envs.
@@ -127,10 +131,10 @@ def _reload():
     logger.create_logger()
 
     # We make sure that plugin is shutdown before doing reload
-    shutdown()
+    shutdown(dev=dev)
 
     # Cleanup artella modules
-    modules_to_reload = ('artella.')
+    modules_to_reload = 'artella.'
     for k in sys.modules.keys():
         if k.startswith(modules_to_reload):
             del sys.modules[k]

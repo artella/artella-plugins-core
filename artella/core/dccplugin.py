@@ -117,7 +117,7 @@ class ArtellaDccPlugin(object):
 
         return True
 
-    def shutdown(self):
+    def shutdown(self, dev=False):
         """
         Shutdown/Uninitialize Artella plugin in current DCC
         :return: True if the shutdown was successful; False otherwise
@@ -131,7 +131,10 @@ class ArtellaDccPlugin(object):
         self.remove_callbacks()
 
         # Remove Artella DCC Menu
-        dcc.execute_deferred(self.remove_menus)
+        if dev:
+            self.remove_menus()
+        else:
+            dcc.execute_deferred(self.remove_menus)
 
         self._artella_drive_client.artella_drive_disconnect()
         self._artella_drive_client = None

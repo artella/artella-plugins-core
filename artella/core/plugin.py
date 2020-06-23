@@ -422,7 +422,7 @@ class ArtellaPluginsManager(object):
 
         return True
 
-    def shutdown(self):
+    def shutdown(self, dev=False):
         """
         Unloads all current loaded Artella plugins
         """
@@ -434,7 +434,10 @@ class ArtellaPluginsManager(object):
             plugin_inst = plugin_dict.get('plugin_instance', None)
             if not plugin_inst:
                 continue
-            dcc.execute_deferred(plugin_inst.cleanup)
+            if dev:
+                plugin_inst.cleanup()
+            else:
+                dcc.execute_deferred(plugin_inst.cleanup)
 
 
 @utils.Singleton
