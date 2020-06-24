@@ -197,7 +197,7 @@ class ArtellaDccPlugin(object):
         if dcc.check_menu_exists(self.MENU_NAME):
             dcc.remove_menu(self.MENU_NAME)
 
-        artella_menu = dcc.add_menu(self.MENU_NAME)
+        artella_menu = dcc.add_menu(self.MENU_NAME, icon='artella.png')
         if not artella_menu:
             return False
 
