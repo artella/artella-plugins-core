@@ -76,9 +76,28 @@ class ArtellaPlugin(object):
 
         if can_load_plugin:
             if plugin_menu and 'label' in plugin_menu:
+                menu_parents = plugin_menu.get('parents', None)
+                if menu_parents:
+                    current_parent = 'Artella' if dcc.check_menu_exists('Artella') else None
+                    for menu_parent in menu_parents:
+                        if not dcc.check_menu_exists(menu_parent):
+
+                            # TODO: Before More Artella menu addition we force the creation of a
+                            # TODO: separator. We should find a way to avoid hardcoded this.
+                            if menu_parent == 'More Artella':
+                                dcc.add_menu_separator('Artella')
+
+                            dcc.add_sub_menu_item(menu_parent, parent_menu=current_parent)
+                        current_parent = menu_parent
+
                 menu_label = plugin_menu['label']
                 menu_command = plugin_menu['command']
-                dcc.add_menu_item(menu_label, menu_command, main_menu)
+                menu_icon = self._config_dict.get('icon', '')
+                if menu_parents:
+                    menu_parent = menu_parents[-1]
+                    dcc.add_menu_item(menu_label, menu_command, menu_parent, icon=menu_icon)
+                else:
+                    dcc.add_menu_item(menu_label, menu_command, main_menu, icon=menu_icon)
 
     def cleanup(self):
         """
@@ -338,7 +357,7 @@ class ArtellaPluginsManager(object):
                 continue
 
             for member in utils.iterate_module_members(sub_module_obj, predicate=inspect.isclass):
-                self.register_plugin(member[1], plugin_config)
+                self.register_plugin(member[1], plugin_config, os.path.dirname(sub_module))
 
         if not self._plugins:
             logger.warning('No Artella plugins found to load!')
@@ -370,11 +389,12 @@ class ArtellaPluginsManager(object):
                 continue
             self._plugins[plugin_id]['plugin_instance'] = plugin_inst
 
-    def register_plugin(self, class_obj, config_path):
+    def register_plugin(self, class_obj, config_path, plugin_path):
         """
         Registers an Artella plugin instance into the manager
         :param class_obj:
         :param config_path:
+        :param plugin_path:
         :return:
         :rtype: bool
         """
@@ -409,6 +429,20 @@ class ArtellaPluginsManager(object):
         plugin_package = plugin_config.get('package', None)
         plugin_icon = plugin_config.get('icon', None)
         plugin_resources = plugin_config.get('resources', None)
+
+        # Register DCC resources, both DCC specific plugin implementation
+        # resources and generic implementation resources
+        if plugin_resources and plugin_path:
+            plugin_resources_paths = []
+            plugin_path_base = os.path.basename(plugin_path)
+            if plugin_path_base == dcc.name():
+                plugin_resources_paths.append(os.path.join(plugin_path, plugin_resources))
+                plugin_resources_paths.append(os.path.join(os.path.dirname(plugin_path), plugin_resources))
+            else:
+                plugin_resources_paths.append(os.path.join(plugin_path, plugin_resources))
+            for plugin_resources_path in plugin_resources_paths:
+                if os.path.isdir(plugin_resources_path):
+                    dcc.register_dcc_resource_path(plugin_resources_path)
 
         self._plugins[plugin_id] = {
             'name': plugin_name,

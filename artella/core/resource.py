@@ -9,6 +9,7 @@ from __future__ import print_function, division, absolute_import
 
 import os
 
+import artella.dcc as dcc
 from artella import register
 from artella.core import utils, qtutils
 
@@ -39,6 +40,11 @@ class ResourcesManager(object):
             return
 
         self._resources_paths.append(resources_path)
+
+        dcc.register_dcc_resource_path(resources_path)
+        icons_path = os.path.join(resources_path, 'icons')
+        if os.path.isdir(icons_path):
+            dcc.register_dcc_resource_path(icons_path)
 
     def icon(self, name, extension='png', color=None):
         """
