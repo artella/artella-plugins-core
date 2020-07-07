@@ -66,7 +66,7 @@ else:
 
             artella_label_layout = QtWidgets.QHBoxLayout()
             artella_label = image.ArtellaImage.small()
-            artella_label.set_artella_image(artella.ResourcesMgr().pixmap('artella'))
+            artella_label.set_artella_image(artella.ResourcesMgr().pixmap('artella_white'))
             self._close_btn = button.ArtellaToolButton(parent=self).image('close').tiny().icon_only()
             self._close_btn.setVisible(closable or False)
             self._close_btn.clicked.connect(self.close)
@@ -216,15 +216,17 @@ else:
             Internal callback function that fades out snack bar widget
             """
 
-            self._pos_anim.setDirection(QtCore.QAbstractAnimation.Backward)
-            self._pos_anim.start()
-            self._opacity_anim.setDirection(QtCore.QAbstractAnimation.Backward)
-            self._opacity_anim.start()
+            if self._pos_anim and self._opacity_anim:
+                self._pos_anim.setDirection(QtCore.QAbstractAnimation.Backward)
+                self._pos_anim.start()
+                self._opacity_anim.setDirection(QtCore.QAbstractAnimation.Backward)
+                self._opacity_anim.start()
 
         def _on_fade_in(self):
             """
             Internal callback function that fades in snack bar widget
             """
 
-            self._pos_anim.start()
-            self._opacity_anim.start()
+            if self._pos_anim and self._opacity_anim:
+                self._pos_anim.start()
+                self._opacity_anim.start()
