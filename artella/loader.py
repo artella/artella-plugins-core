@@ -62,6 +62,7 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
     import artella.register as register
     import artella.dcc as dcc
 
+    # Do not remove this imports, they do registration of some of the core Artella classes
     from artella.core import dcc as dcc_core
     from artella.core import client, resource, plugin, dccplugin, qtutils
     from artella.widgets import theme, color
@@ -94,7 +95,7 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
     artella.PluginsMgr().load_registered_plugins()
 
     # Initialize Artella DCC plugin
-    artella.DccPlugin(artella_drive_client).init(dev=dev)
+    artella.DccPlugin(artella_drive_client).init(dev=dev, show_dialogs=False)
 
     return True
 

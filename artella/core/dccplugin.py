@@ -67,9 +67,12 @@ class ArtellaDccPlugin(object):
 
         pass
 
-    def init(self, dev=False):
+    def init(self, dev=False, show_dialogs=True):
         """
         Initializes Artella plugin in current DCC.
+
+        :param bool dev: Whether plugin is initialized in development mode or not
+        :param bool show_dialogs: Whether dialogs should appear during plugin initialization or not
         :return: True if the initialization was successful; False otherwise.
         :rtype: bool
         """
@@ -83,7 +86,7 @@ class ArtellaDccPlugin(object):
         dcc.execute_deferred(self.create_menus)
 
         # Initialize Artella Drive client
-        self.init_client()
+        self.init_client(show_dialogs=show_dialogs)
 
         logger.debug('trying to create quit signal ...')
         if qtutils.QT_AVAILABLE:
@@ -98,14 +101,16 @@ class ArtellaDccPlugin(object):
 
         return True
 
-    def init_client(self):
+    def init_client(self, show_dialogs=True):
         """
         Initializes Artella Drive Client.
+
+        :param bool show_dialogs: Whether dialogs should appear during plugin initialization or not
         :return: True if the Artella Drive client initialization was successful; False otherwise.
         :rtype: bool
         """
 
-        artella_drive_client = self._artella_drive_client or self.get_client()
+        artella_drive_client = self._artella_drive_client or self.get_client(show_dialogs=show_dialogs)
         if artella_drive_client:
             artella_drive_client.artella_drive_listen()
             self.setup_project(artella_drive_client.get_local_root())
@@ -273,7 +278,7 @@ class ArtellaDccPlugin(object):
 
         return True if auth_header else False
 
-    def get_client(self):
+    def get_client(self, show_dialogs=True):
         """
         Returns current Artella Drive Client being used by Artella Plugin
 
@@ -287,8 +292,9 @@ class ArtellaDccPlugin(object):
             dcc_extensions = dcc.extensions()
             artella_drive_client = client.ArtellaDriveClient.get(extensions=dcc_extensions)
             if not artella_drive_client:
-                self.show_warning_message(
-                    'Local Drive Client not available. Please launch Artella Drive App', 'Artella Drive App')
+                if show_dialogs:
+                    self.show_warning_message(
+                        'Local Drive Client not available. Please launch Artella Drive App', 'Artella Drive App')
                 return None
             else:
                 self._artella_drive_client = artella_drive_client
@@ -300,8 +306,9 @@ class ArtellaDccPlugin(object):
         if not self._artella_drive_client.is_available:
             self._artella_drive_client.update_remotes_sessions(show_dialogs=False)
             if not self._artella_drive_client.is_available:
-                self.show_warning_message(
-                    'Local Drive Client not available. Please launch Artella Drive App', 'Artella Drive App')
+                if show_dialogs:
+                    self.show_warning_message(
+                        'Local Drive Client not available. Please launch Artella Drive App', 'Artella Drive App')
                 return None
 
         # The challenge value gets updated when the Artella Drive App restarts.

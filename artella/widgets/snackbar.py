@@ -216,17 +216,21 @@ else:
             Internal callback function that fades out snack bar widget
             """
 
-            if self._pos_anim and self._opacity_anim:
+            try:
                 self._pos_anim.setDirection(QtCore.QAbstractAnimation.Backward)
                 self._pos_anim.start()
                 self._opacity_anim.setDirection(QtCore.QAbstractAnimation.Backward)
                 self._opacity_anim.start()
+            except Exception:
+                pass
 
         def _on_fade_in(self):
             """
             Internal callback function that fades in snack bar widget
             """
 
-            if self._pos_anim and self._opacity_anim:
+            try:
                 self._pos_anim.start()
                 self._opacity_anim.start()
+            except Exception:
+                pass
