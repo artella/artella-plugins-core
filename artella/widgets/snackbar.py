@@ -33,7 +33,7 @@ else:
 
         closed = QtCore.Signal()
 
-        DEFAULT_DURATION = 4
+        DEFAULT_DURATION = 6
         DEFAULT_TOP = 180
 
         def __init__(self, text='', title='', duration=None, artella_type=None, closable=False, parent=None):
