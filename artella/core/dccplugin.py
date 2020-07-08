@@ -591,7 +591,7 @@ class ArtellaDccPlugin(object):
 
         artella_drive_client = self.get_client()
         if not artella_drive_client:
-            return False
+            return False, False, '', False
 
         if not file_path:
             file_path = dcc.scene_name()
