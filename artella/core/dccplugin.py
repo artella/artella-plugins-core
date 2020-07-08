@@ -385,7 +385,7 @@ class ArtellaDccPlugin(object):
         :rtype: bool
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=False)
         if not artella_drive_client:
             return False
 
@@ -423,7 +423,7 @@ class ArtellaDccPlugin(object):
         "C:/Users/Tomi/artella/data/ProjectA/Assets/Characters/A/Model/a.ma"
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=False)
         if not artella_drive_client:
             return file_path
 
@@ -443,7 +443,7 @@ class ArtellaDccPlugin(object):
         "$ART_LOCAL_ROOT/ProjectA/Assets/Characters/A/Model/a.ma"
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=False)
         if not artella_drive_client:
             return file_path
 
@@ -459,7 +459,7 @@ class ArtellaDccPlugin(object):
         :return:
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=False)
         if not artella_drive_client:
             return False
 
@@ -589,7 +589,7 @@ class ArtellaDccPlugin(object):
         :rtype: tuple(bool, bool, str)
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=show_dialogs)
         if not artella_drive_client:
             return False, False, '', False
 
@@ -616,7 +616,7 @@ class ArtellaDccPlugin(object):
         :rtype: bool
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=show_dialogs)
         if not artella_drive_client:
             return False
 
@@ -643,7 +643,7 @@ class ArtellaDccPlugin(object):
         :rtype: bool
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=show_dialogs)
         if not artella_drive_client:
             return False
 
@@ -708,7 +708,7 @@ class ArtellaDccPlugin(object):
         :rtype: bool
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=show_dialogs)
         if not artella_drive_client:
             return False
 
@@ -763,7 +763,7 @@ class ArtellaDccPlugin(object):
         True
         """
 
-        artella_drive_client = self.get_client()
+        artella_drive_client = self.get_client(show_dialogs=show_dialogs)
         if not artella_drive_client:
             return False
 
