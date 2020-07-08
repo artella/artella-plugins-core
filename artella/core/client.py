@@ -107,7 +107,7 @@ class ArtellaDriveClient(object):
             return None
 
         # Updates the list of available remotes
-        artella_client.update_remotes_sessions()
+        artella_client.update_remotes_sessions(show_dialogs=False)
 
         return artella_client
 
@@ -214,7 +214,8 @@ class ArtellaDriveClient(object):
         if not self.update_auth_challenge():
             msg = 'Unable to authenticate to Artella Drive App.'
             logger.error(msg)
-            dcc.show_error('Artella - Authentication error', msg)
+            if show_dialogs:
+                dcc.show_error('Artella - Authentication error', msg)
             return
 
         _ping_remote_sessions()
@@ -226,8 +227,6 @@ class ArtellaDriveClient(object):
             if not self._remote_sessions:
                 msg = 'No remote sessions available. Please visit your Project Drive in Artella Web App and try again!'
                 logger.error(msg)
-                if show_dialogs:
-                    dcc.show_error('Artella - Remote Sessions not available', msg)
 
         return self._remote_sessions
 
