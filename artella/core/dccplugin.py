@@ -375,7 +375,25 @@ class ArtellaDccPlugin(object):
     # FILE PATHS
     # ==============================================================================================================
 
-    def local_path_to_uri(self, file_path, prefix=None):
+    def is_artella_path(self, file_path=None):
+        """
+        Returns whether or not given file path is an Artella file path or not
+        A path is considered to be an Artella path if the path is located inside the Artella project folder
+        in the user machine
+        :param str file_path: path to check. If not given, current DCC scene file path will be used
+        :return: True if the given file path is an Artella path; False otherwise.
+        :rtype: bool
+        """
+
+        artella_drive_client = self.get_client()
+        if not artella_drive_client:
+            return False
+
+        file_path = file_path or dcc.scene_name()
+
+        return artella_drive_client.is_artella_path(file_path)
+
+    def local_path_to_uri(self, file_path):
         """
         Translates a local file path to its URI format
         :param str file_path: Absolute local file path we want to translate to URI
@@ -384,10 +402,6 @@ class ArtellaDccPlugin(object):
         :return: path in its URI format if current DCC supports this feature; path without any change otherwise
         :rtype: str
         """
-
-        if prefix:
-            # TODO: (dave): Handle TCL based path strings from Pixar nodes
-            raise NotImplementedError('Support for TCL not implemented yet!')
 
         if not dcc.supports_uri_scheme():
             logger.warning('Current DCC {} does not supports Artella URI scheme!'.format(dcc.name()))
@@ -438,10 +452,10 @@ class ArtellaDccPlugin(object):
     def update_paths(self, file_path=None, show_dialogs=True, call_post_function=True, skip_save=True):
         """
         Updates all file paths of the given file path to make sure that they point to valid Artella file paths
-        :param file_path:
-        :param show_dialogs:
-        :param call_post_function:
-        :param skip_save:
+        :param str file_path:
+        :param bool show_dialogs:
+        :param bool call_post_function:
+        :param bool skip_save:
         :return:
         """
 
