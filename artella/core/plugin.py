@@ -84,10 +84,12 @@ class ArtellaPlugin(object):
 
                             # TODO: Before More Artella menu addition we force the creation of a
                             # TODO: separator. We should find a way to avoid hardcoded this.
+                            icon = ''
                             if menu_parent == 'More Artella':
                                 dcc.add_menu_separator('Artella')
+                                icon = 'artella.png'
 
-                            dcc.add_sub_menu_item(menu_parent, parent_menu=current_parent)
+                            dcc.add_sub_menu_item(menu_parent, parent_menu=current_parent, icon=icon)
                         current_parent = menu_parent
 
                 menu_label = plugin_menu['label']

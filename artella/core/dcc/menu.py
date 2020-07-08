@@ -141,13 +141,14 @@ def add_menu_item(menu_item_name, menu_item_command='', parent_menu=None, icon='
 
 @reroute
 @abstract
-def add_sub_menu_item(menu_item_name, menu_item_command='', parent_menu=None, **kwargs):
+def add_sub_menu_item(menu_item_name, menu_item_command='', parent_menu=None, icon='', **kwargs):
     """
     Adds a new sub menu item to the given parent menu. When the item is clicked by the user the given command will be+
     executed
     :param str menu_item_name: name of the menu item to create
     :param str menu_item_command: command to execute when menu item is clicked
     :param object parent_menu: parent menu to attach this menu into. Must be specific menu DCC native object
+    :param str icon: name of the icon to be used in this menu item
     :return: New DCC native menu item object created or None if the menu item was not created successfully
     :rtype: object or None
     """
