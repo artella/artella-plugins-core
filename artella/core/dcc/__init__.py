@@ -28,6 +28,9 @@ DCCS = dict()
 # during a session.
 CURRENT_DCC = None
 
+# Cached active DCC module name.
+CURRENT_DCC_MODULE = None
+
 # Cached used to store all the reroute paths done during a session. We assume DCC reroutes will not change
 # during a session.
 DCC_REROUTE_CACHE = dict()
@@ -56,6 +59,7 @@ def current_dcc():
 
     # If active DCC is already cache, we use it
     global CURRENT_DCC
+    global CURRENT_DCC_MODULE
     if CURRENT_DCC:
         return CURRENT_DCC
 
@@ -86,6 +90,7 @@ def current_dcc():
                 dcc_module_name = '{}.{}'.format(consts.ARTELLA_DCCS_NAMESPACE, dcc)
                 import_module(dcc_module_name)
                 CURRENT_DCC = dcc
+                CURRENT_DCC_MODULE = dcc_module_name
                 logger.info('Current DCC: {}'.format(CURRENT_DCC))
                 return CURRENT_DCC
             except ImportError as exc:
