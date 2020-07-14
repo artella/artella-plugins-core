@@ -358,8 +358,23 @@ class ArtellaPluginsManager(object):
             if not sub_module_obj:
                 continue
 
+            plugin_version = None
+            module_path_dir = module_path.rsplit('.', 1)[0]
+            version_module_path = '{}.__version__'.format(module_path_dir)
+            version_module_path = version_module_path.replace('.{}.__'.format(dcc_name), '.__')
+            try:
+                version_module_obj = utils.import_module(version_module_path)
+            except Exception:
+                version_module_obj = None
+            if version_module_obj:
+                try:
+                    plugin_version = version_module_obj.get_version()
+                except Exception as exc:
+                    logger.warning(
+                        'Impossible to retrieve version for Artella Plugin module: {} | {}'.format(module_path, exc))
+
             for member in utils.iterate_module_members(sub_module_obj, predicate=inspect.isclass):
-                self.register_plugin(member[1], plugin_config, os.path.dirname(sub_module))
+                self.register_plugin(member[1], plugin_config, os.path.dirname(sub_module), plugin_version)
 
         if not self._plugins:
             logger.warning('No Artella plugins found to load!')
@@ -391,12 +406,13 @@ class ArtellaPluginsManager(object):
                 continue
             self._plugins[plugin_id]['plugin_instance'] = plugin_inst
 
-    def register_plugin(self, class_obj, config_path, plugin_path):
+    def register_plugin(self, class_obj, config_path, plugin_path, plugin_version=None):
         """
         Registers an Artella plugin instance into the manager
         :param class_obj:
         :param config_path:
         :param plugin_path:
+        :param plugin_version:
         :return:
         :rtype: bool
         """
@@ -451,7 +467,8 @@ class ArtellaPluginsManager(object):
             'package': plugin_package,
             'icon': plugin_icon,
             'class': class_obj,
-            'config': plugin_config
+            'config': plugin_config,
+            'version': plugin_version
         }
 
         logger.info('Artella Plugin: "{}" registered successfully!'.format(plugin_id))
