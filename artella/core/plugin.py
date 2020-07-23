@@ -447,8 +447,8 @@ class ArtellaPluginsManager(object):
 
         # Register DCC resources, both DCC specific plugin implementation
         # resources and generic implementation resources
+        plugin_resources_paths = list()
         if plugin_resources and plugin_path:
-            plugin_resources_paths = []
             plugin_path_base = os.path.basename(plugin_path)
             if plugin_path_base == dcc.name():
                 plugin_resources_paths.append(os.path.join(plugin_path, plugin_resources))
@@ -465,7 +465,8 @@ class ArtellaPluginsManager(object):
             'icon': plugin_icon,
             'class': class_obj,
             'config': plugin_config,
-            'version': plugin_version
+            'version': plugin_version,
+            'resource_paths': plugin_resources_paths
         }
 
         logger.info('Artella Plugin: "{}" registered successfully!'.format(plugin_id))
