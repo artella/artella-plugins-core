@@ -7,6 +7,7 @@ Module that contains DCC abstract window implementation
 
 from __future__ import print_function, division, absolute_import
 
+import artella
 from artella import register
 from artella.core import qtutils
 
@@ -58,6 +59,20 @@ else:
             self.main_layout = self.get_main_layout()
             main_widget.setLayout(self.main_layout)
             self.setCentralWidget(main_widget)
+
+            artella_frame = QtWidgets.QFrame()
+            artella_frame_layout = QtWidgets.QHBoxLayout()
+            artella_frame.setLayout(artella_frame_layout)
+            artella_frame.setStyleSheet('background: rgb(23, 165, 151)')
+
+            artella_header = QtWidgets.QLabel()
+            artella_header_pixmap = artella.ResourcesMgr().pixmap('artella_header')
+            artella_header.setPixmap(artella_header_pixmap)
+            artella_frame_layout.addStretch()
+            artella_frame_layout.addWidget(artella_header)
+            artella_frame_layout.addStretch()
+
+            self.main_layout.addWidget(artella_frame)
 
         def fade_close(self):
             self._fade_out()
