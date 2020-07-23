@@ -283,7 +283,7 @@ def import_module(module_path, name=None):
         try:
             return importlib.import_module(module_path)
         except ImportError as exc:
-            logger.log_exception('Failed to load module: "{}" | {}'.format(module_path, exc))
+            logger.exception('Failed to load module: "{}" | {}'.format(module_path, exc))
             return None
 
     try:
