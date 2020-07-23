@@ -31,3 +31,9 @@ jobs:
           body: ${{ github.event.commits[0].message }}
           draft: false
           prerelease: false
+      - name: Publish Package to PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_password }}
