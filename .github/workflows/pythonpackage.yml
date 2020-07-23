@@ -39,10 +39,4 @@ jobs:
     - name: Build Python Package
       run: |
         python setup.py sdist bdist_wheel
-    - name: Publish Package to Test PyPI
-      if: startsWith( github.ref, 'refs/tags/tests/')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        password: ${{ secrets.test_pypi_password }}
-        repository_url: https://test.pypi.org/legacy/
 
