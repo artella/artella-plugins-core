@@ -10,7 +10,7 @@ from __future__ import print_function, division, absolute_import
 from artella.core import qtutils
 
 if qtutils.QT_AVAILABLE:
-    from artella.externals.Qt import QtCore, QtWidgets, QtGui
+    from artella.externals.Qt import QtCore, QtWidgets
 
 
 class ArtellaLabelTypes(object):

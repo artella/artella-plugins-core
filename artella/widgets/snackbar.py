@@ -10,7 +10,7 @@ from __future__ import print_function, division, absolute_import
 import artella
 from artella import dcc
 from artella.core import qtutils
-from artella.widgets import image, label, button, divider, color
+from artella.widgets import image, label, button, divider
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets
