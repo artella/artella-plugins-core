@@ -32,7 +32,7 @@ jobs:
           draft: false
           prerelease: false
       - name: Publish Package to PyPI
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/releases')
+        if: startsWith( github.ref, 'refs/tags/releases/')
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
