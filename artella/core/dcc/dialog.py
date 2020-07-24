@@ -27,6 +27,8 @@ else:
                 from artella import dcc
                 parent = dcc.get_main_window()
 
+            self._use_artella_header = kwargs.pop('use_artella_header', True)
+
             super(AbstractDialog, self).__init__(parent, **kwargs)
 
             self._pos_anim = QtCore.QPropertyAnimation(self)
@@ -58,19 +60,20 @@ else:
             self.main_layout = self.get_main_layout()
             self.setLayout(self.main_layout)
 
-            artella_frame = QtWidgets.QFrame()
-            artella_frame_layout = QtWidgets.QHBoxLayout()
-            artella_frame.setLayout(artella_frame_layout)
-            artella_frame.setStyleSheet('background: rgb(23, 165, 151)')
+            if self._use_artella_header:
+                artella_frame = QtWidgets.QFrame()
+                artella_frame_layout = QtWidgets.QHBoxLayout()
+                artella_frame.setLayout(artella_frame_layout)
+                artella_frame.setStyleSheet('background: rgb(23, 165, 151)')
 
-            artella_header = QtWidgets.QLabel()
-            artella_header_pixmap = artella.ResourcesMgr().pixmap('artella_header')
-            artella_header.setPixmap(artella_header_pixmap)
-            artella_frame_layout.addStretch()
-            artella_frame_layout.addWidget(artella_header)
-            artella_frame_layout.addStretch()
+                artella_header = QtWidgets.QLabel()
+                artella_header_pixmap = artella.ResourcesMgr().pixmap('artella_header')
+                artella_header.setPixmap(artella_header_pixmap)
+                artella_frame_layout.addStretch()
+                artella_frame_layout.addWidget(artella_header)
+                artella_frame_layout.addStretch()
 
-            self.main_layout.addWidget(artella_frame)
+                self.main_layout.addWidget(artella_frame)
 
         def fade_close(self):
             self._fade_out()
