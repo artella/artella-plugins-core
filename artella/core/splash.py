@@ -100,7 +100,7 @@ else:
 
 class SplashDialog(artella.Dialog, object):
     def __init__(self, parent=None, **kwargs):
-        super(SplashDialog, self).__init__(parent, **kwargs)
+        super(SplashDialog, self).__init__(parent, use_artella_header=False, **kwargs)
 
     def get_main_layout(self):
         main_layout = QtWidgets.QVBoxLayout()
