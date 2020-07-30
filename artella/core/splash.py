@@ -35,7 +35,7 @@ else:
             pass
 
     class ProgressCricle(QtWidgets.QProgressBar, object):
-        def __init__(self, parent=None):
+        def __init__(self, parent=None, **kwargs):
             super(ProgressCricle, self).__init__(parent)
 
             self._main_layout = QtWidgets.QHBoxLayout()
@@ -44,7 +44,7 @@ else:
             self._main_layout.addWidget(self._default_label)
             self.setLayout(self._main_layout)
             self._color = QtGui.QColor(221, 235, 230)
-            self._width = 140
+            self._width = kwargs.get('width', 140)
 
             self.setTextDirection(self.Direction.BottomToTop)
 
