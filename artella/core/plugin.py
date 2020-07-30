@@ -329,7 +329,7 @@ class ArtellaPluginsManager(object):
             sub_modules_found = list()
             for sub_module in utils.iterate_modules(plugin_path):
                 file_name = os.path.splitext(os.path.basename(sub_module))[0]
-                if file_name.startswith('__') or sub_module.endswith('.pyc'):
+                if file_name.startswith('_') or file_name.startswith('test_') or sub_module.endswith('.pyc'):
                     continue
                 if not sub_module or sub_module in sub_modules_found:
                     continue
