@@ -291,9 +291,6 @@ class ArtellaPluginsManager(object):
             if not plugin_path or not os.path.isdir(plugin_path) or plugin_path in self._plugin_paths:
                 return
 
-            if plugin_path not in sys.path:
-                sys.path.append(plugin_path)
-
             self._plugin_paths.append(plugin_path)
 
     def load_registered_plugins(self):
@@ -316,12 +313,16 @@ class ArtellaPluginsManager(object):
                     continue
                 clean_path = utils.clean_path(root)
                 found_paths[clean_path] = os.path.join(root, consts.ARTELLA_PLUGIN_CONFIG)
-                if clean_path not in sys.path:
-                    sys.path.append(clean_path)
 
         if not found_paths:
             logger.info('No plugins found in registered plugin paths: {}'.format(self._plugin_paths))
             return
+
+        for plugin_path in plugin_paths:
+            for plugin_dir in os.listdir(plugin_path):
+                clean_path = utils.clean_path(os.path.join(plugin_path, plugin_dir))
+                if os.path.isdir(clean_path) and clean_path not in sys.path:
+                    sys.path.append(clean_path)
 
         for plugin_path, plugin_config in found_paths.items():
 
