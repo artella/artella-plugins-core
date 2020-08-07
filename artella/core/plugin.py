@@ -339,17 +339,28 @@ class ArtellaPluginsManager(object):
                 continue
 
             # Find specific DCC plugin implementation
-            sub_module = None
             dcc_name = dcc.name()
-            for sub_module_found in sub_modules_found:
-                parent_dir_name = os.path.basename(os.path.dirname(sub_module_found))
-                if parent_dir_name == dcc_name:
-                    sub_module = sub_module_found
-                    break
-            if not sub_module:
-                sub_module = sub_modules_found[0]
+            sub_module = sub_modules_found[0]
 
-            module_path = utils.convert_module_path_to_dotted_path(os.path.normpath(sub_module))
+            max_length = 50
+            index = 0
+            artella_module_parts = list()
+            temp_sub_module = sub_module
+            while True:
+                if index > max_length:
+                    artella_module_parts = list()
+                    break
+                base_name = os.path.basename(temp_sub_module)
+                if not base_name or base_name == 'artella':
+                    artella_module_parts.append(base_name)
+                    break
+                artella_module_parts.append(base_name)
+                temp_sub_module = os.path.dirname(temp_sub_module)
+                index += 1
+            if not artella_module_parts:
+                module_path = utils.convert_module_path_to_dotted_path(os.path.normpath(sub_module))
+            else:
+                module_path = os.path.splitext('.'.join(reversed(artella_module_parts)))[0]
 
             try:
                 sub_module_obj = utils.import_module(module_path)
