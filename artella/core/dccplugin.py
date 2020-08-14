@@ -67,12 +67,14 @@ class ArtellaDccPlugin(object):
 
         pass
 
-    def init(self, dev=False, show_dialogs=True):
+    def init(self, dev=False, show_dialogs=True, create_menu=True, create_callbacks=True, *args, **kwargs):
         """
         Initializes Artella plugin in current DCC.
 
         :param bool dev: Whether plugin is initialized in development mode or not
         :param bool show_dialogs: Whether dialogs should appear during plugin initialization or not
+        :param bool create_menu: Whether menu should be created or not
+        :param bool create_callbacks: Whether or not DCC callbacks should be created
         :return: True if the initialization was successful; False otherwise.
         :rtype: bool
         """
@@ -80,10 +82,12 @@ class ArtellaDccPlugin(object):
         self._dev = dev
 
         # Initialize Artella callbacks
-        self.setup_callbacks()
+        if create_callbacks:
+            self.setup_callbacks()
 
         # Create Artella DCC Menu
-        dcc.execute_deferred(self.create_menus)
+        if create_menu:
+            dcc.execute_deferred(self.create_menus)
 
         # Initialize Artella Drive client
         self.init_client(show_dialogs=show_dialogs)
