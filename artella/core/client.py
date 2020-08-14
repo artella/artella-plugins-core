@@ -344,7 +344,7 @@ class ArtellaDriveClient(object):
         """
         Returns the project name giving its remote Artella ID
 
-        :param str project_id: ID of the project in remote Artelal server
+        :param str project_id: ID of the project in remote Artella server
         :param str remote_session: Remote session we want to search project on. If not given, the project will be
             search in all available remote sessions
         :return: Name of the project
@@ -696,7 +696,7 @@ class ArtellaDriveClient(object):
         if not self.get_remote_sessions(update=True):
             logger.warning(
                 'No remote sessions available. Artella App Drive status call aborted.')
-            return dict()
+            return list()
 
         file_paths = utils.force_list(file_paths, remove_duplicates=True)
         result = list()
@@ -1042,6 +1042,16 @@ class ArtellaDriveClient(object):
         return is_locked, is_locked_by_me, locked_by_name, remote_record_found
 
     def get_progress(self):
+        """
+        Returns the download progress information of the current download operation from Artella server
+        :return: A tuple containing the following information:
+            - amount of done download operations
+            - amount of total download operations in progress
+            - amount of total download operations that are going to be done
+            - amount of total bytes downloaded
+            - amount of total bytes to download
+        :rtype: int, int, int, int, int
+        """
 
         tx_count_done = 0
         tx_count_total = 0
