@@ -16,7 +16,9 @@ import artella.register as register
 from artella.core import consts, utils
 
 
-def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, dev=False):
+def init(
+        init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, dev=False,
+        load_plugins=True, create_menu=True, create_callbacks=True):
     """
     Initializes Artella Plugin
 
@@ -26,6 +28,9 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
     :param list(str) dcc_paths: List of paths where Artella DCC implementations can be located
     :param list(str) extensions: List of extensions to register
     :param bool dev: Whether or not initialization should be done in dev mode
+    :param bool load_plugins: Whether or not Artella Plugins should be loaded
+    :param bool create_menu: Whether or not Artella menu should be created
+    :param bool create_callbacks: Whether or not Artella DCC plugin callbacks should be created
     :return: True if Artella initialization was successful; False otherwise.
     :rtype: bool
     """
@@ -55,6 +60,10 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
             dcc_paths_str = ';'.join(clean_env)
         else:
             dcc_paths_str = ';'.join(valid_dcc_paths)
+    if os.environ.get(consts.AED, ''):
+        if dcc_paths_str:
+            os.environ[consts.AED] += ';{}'.format(dcc_paths_str)
+    else:
         os.environ[consts.AED] = dcc_paths_str
 
     # Once DCC paths are registered we can import modules
@@ -74,7 +83,7 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
         return False
 
     # Specific DCC extensions are managed by the client
-    dcc_extensions = dcc.extensions()
+    dcc_extensions = dcc.extensions() or list()
     extensions.extend(dcc_extensions)
 
     # Initialize resources and theme
@@ -88,14 +97,16 @@ def init(init_client=True, plugin_paths=None, dcc_paths=None, extensions=None, d
     artella_drive_client = client.ArtellaDriveClient.get(extensions=extensions) if init_client else None
 
     # Load Plugins
-    default_plugins_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plugins')
-    if default_plugins_path not in plugins_path:
-        plugins_path.append(default_plugins_path)
-    artella.PluginsMgr().register_paths(plugins_path)
-    artella.PluginsMgr().load_registered_plugins()
+    if load_plugins:
+        default_plugins_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'plugins')
+        if default_plugins_path not in plugins_path:
+            plugins_path.append(default_plugins_path)
+        artella.PluginsMgr().register_paths(plugins_path)
+        artella.PluginsMgr().load_registered_plugins()
 
     # Initialize Artella DCC plugin
-    artella.DccPlugin(artella_drive_client).init(dev=dev, show_dialogs=False)
+    artella.DccPlugin(artella_drive_client).init(
+        dev=dev, show_dialogs=False, create_menu=create_menu, create_callbacks=create_callbacks)
 
     return True
 
