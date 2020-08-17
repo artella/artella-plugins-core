@@ -917,7 +917,7 @@ class ArtellaDriveClient(object):
             rsp = self._communicate(req, json.dumps(payload).encode(), method='DELETE')
             if 'error' in rsp:
                 logger.error('Unable to unlock file path "{}" "{}"'.format(file_path, rsp.get('error')))
-                return False
+                return result
 
             if isinstance(rsp, dict):
                 result[file_path] = rsp.get('response', False) and rsp.get('status_code', 0) == 200
@@ -926,7 +926,7 @@ class ArtellaDriveClient(object):
                 # information. We consider that as a valid lock.
                 result[file_path] = True
 
-        return file_paths
+        return result
 
     def file_current_version(self, file_path, _status=None):
         """
@@ -992,7 +992,7 @@ class ArtellaDriveClient(object):
 
     def can_lock_file(self, file_path):
         """
-        Returns whether or not current opened DCC file can locked or not
+        Returns whether or not current opened DCC file (or given file path) can be locked or not
         A file only can be locked if it is not already locked by other user.
 
         :param str or None file_path: Absolute local file path we want to check if can be locked or not.
@@ -1010,6 +1010,7 @@ class ArtellaDriveClient(object):
 
         return False
 
+
     def check_lock(self, file_path):
         """
         Returns whether or not the given file is locked and whether or not current user is the one that has the file
@@ -1021,7 +1022,7 @@ class ArtellaDriveClient(object):
             - is_locked_by_me: True if the given file is locked by current user; False otherwise
             - locked_by_name: Name of the user that currently has the file locked
             - remote_record_found: Indicates whether the request relates to an existing remote file record or not
-        :rtype: tuple(bool, bool, str)
+        :rtype: tuple(bool, bool, str, bool)
         """
 
         payload = {
