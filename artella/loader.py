@@ -130,13 +130,13 @@ def shutdown(dev=False, cleanup_modules=False):
     except Exception as exc:
         pass
 
-    register.cleanup()
-
     # Cleanup artella modules
     if cleanup_modules:
-        modules_to_reload = 'artella.'
+
+        register.cleanup()
+
         for k in sys.modules.keys():
-            if k.startswith(modules_to_reload):
+            if k.startswith('artella.'):
                 del sys.modules[k]
 
         global CURRENT_DCC
