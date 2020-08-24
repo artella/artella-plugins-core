@@ -19,4 +19,3 @@ def create_logger():
 
     logging.config.fileConfig(
         os.path.normpath(os.path.join(os.path.dirname(__file__), 'logging.ini')), disable_existing_loggers=False)
-

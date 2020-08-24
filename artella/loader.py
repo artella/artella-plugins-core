@@ -9,6 +9,7 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
+import logging
 
 import artella
 from artella import logger as logger
@@ -41,6 +42,7 @@ def init(
 
     # Create logger
     logger.create_logger()
+    artella_logger = logging.getLogger('artella')
 
     # Register DCC paths
     valid_dcc_paths = list()
@@ -80,7 +82,7 @@ def init(
     # Make sure that Artella Drive client and DCC are cached during initialization
     current_dcc = dcc_core.current_dcc()
     if not current_dcc:
-        logger.error('Impossible to load Artella Plugin because no DCC is available!')
+        artella_logger.error('Impossible to load Artella Plugin because no DCC is available!')
         return False
 
     # Specific DCC extensions are managed by the client
