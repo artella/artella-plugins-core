@@ -270,13 +270,15 @@ def debug_object_string(obj, msg):
         return '[%s.%s function] :: %s' % (obj.__module__, obj.__name__, msg)
 
 
-def import_module(module_path, name=None):
+def import_module(module_path, name=None, skip_exceptions=False):
     """
     Imports the given module path. If the given module path is a dotted one, import lib will be used. Otherwise, it's
     expected that given module path is the absolute path to the source file. If name argument is not given, then the
     basename without the extension will be used
+
     :param module_path: str, module path. Can be a dotted path (tpDcc.libs.python.modules) or an absolute one
     :param name: str, name for the imported module which will be used if the module path is an absolute path
+    :param skip_exceptions: bool, Whether or not exceptions should be arise if a module cannot be imported
     :return: ModuleObject, imported module object
     """
 
@@ -284,7 +286,8 @@ def import_module(module_path, name=None):
         try:
             return importlib.import_module(module_path)
         except ImportError as exc:
-            logger.exception('Failed to load module: "{}" | {}'.format(module_path, exc))
+            if not skip_exceptions:
+                logger.exception('Failed to load module: "{}" | {}'.format(module_path, exc))
             return None
 
     try:
