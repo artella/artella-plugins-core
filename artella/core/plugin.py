@@ -470,6 +470,9 @@ class ArtellaPluginsManager(object):
             for plugin_resources_path in plugin_resources_paths:
                 if os.path.isdir(plugin_resources_path):
                     dcc.register_dcc_resource_path(plugin_resources_path)
+                    icons_path = os.path.join(plugin_resources_path, 'icons')
+                    if os.path.isdir(icons_path):
+                        dcc.register_dcc_resource_path(icons_path)
 
         self._plugins[plugin_id] = {
             'name': plugin_name,
