@@ -8,6 +8,7 @@ Module that contains Artella DCC Plugin functionality
 from __future__ import print_function, division, absolute_import
 
 import os
+import sys
 import time
 import logging
 import threading
@@ -800,6 +801,9 @@ class ArtellaDccPlugin(object):
                 break
 
         dcc_progress_bar.end()
+
+        if sys.platform == 'darwin':
+            time.sleep(3.0)
 
         return valid_download
 
