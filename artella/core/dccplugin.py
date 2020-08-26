@@ -774,6 +774,21 @@ class ArtellaDccPlugin(object):
 
         local_path = artella_drive_client.translate_path(file_path)
 
+        remote_file_size = 0
+        file_status = artella_drive_client.status(local_path, include_remote=True)
+        if not file_status:
+            logger.warning('File "{}" not found in remote'.format(file_status))
+            return False
+        file_status = file_status[0]
+        for version_id, version_data in file_status.items():
+            if not version_id or not version_id.startswith('project__'):
+                continue
+            remote_file_size = version_data.get('remote_info', dict()).get('content_length', 0)
+            break
+        if not remote_file_size:
+            logger.warning('File "{}" in remote has not a valid file size: {}'.format(local_path, remote_file_size))
+            return False
+
         if show_dialogs:
             dcc_progress_bar = splash.ProgressSplashDialog()
             dcc_progress_bar.start()
@@ -809,6 +824,16 @@ class ArtellaDccPlugin(object):
             while not os.path.exists(local_path) and total_checks < 5:
                 time.sleep(1.0)
                 total_checks += 1
+            if not os.path.exists(local_path):
+                return False
+            total_checks = 0
+            file_size = os.path.getsize(local_path)
+            while file_size != remote_file_size and total_checks < 5:
+                file_size = os.path.getsize(local_path)
+                time.sleep(1.0)
+                total_checks += 1
+            if file_size != remote_file_size:
+                return False
 
         return valid_download
 
