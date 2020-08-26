@@ -785,11 +785,12 @@ class ArtellaDccPlugin(object):
 
         valid_download = True
         while True:
-            dcc_progress_bar.repaint()
-            if dcc_progress_bar.is_cancelled():
-                artella_drive_client.pause_downloads()
-                valid_download = False
-                break
+            if show_dialogs:
+                dcc_progress_bar.repaint()
+                if dcc_progress_bar.is_cancelled():
+                    artella_drive_client.pause_downloads()
+                    valid_download = False
+                    break
             progress, fd, ft, bd, bt = artella_drive_client.get_progress()
             progress_status = '{} | {} of {} KiB downloaded\n{} of {} files downloaded'.format(
                     os.path.basename(file_path), int(bd / 1024), int(bt / 1024), fd, ft)
@@ -800,10 +801,14 @@ class ArtellaDccPlugin(object):
             if progress >= 100 or bd == bt:
                 break
 
-        dcc_progress_bar.end()
+        if show_dialogs:
+            dcc_progress_bar.end()
 
-        if sys.platform == 'darwin':
-            time.sleep(3.0)
+        total_checks = 0
+        if valid_download:
+            while not os.path.exists(local_path) and total_checks < 5:
+                time.sleep(1.0)
+                total_checks += 1
 
         return valid_download
 

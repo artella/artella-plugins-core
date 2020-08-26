@@ -1010,7 +1010,6 @@ class ArtellaDriveClient(object):
 
         return False
 
-
     def check_lock(self, file_path):
         """
         Returns whether or not the given file is locked and whether or not current user is the one that has the file
@@ -1045,6 +1044,7 @@ class ArtellaDriveClient(object):
     def get_progress(self):
         """
         Returns the download progress information of the current download operation from Artella server
+
         :return: A tuple containing the following information:
             - amount of done download operations
             - amount of total download operations in progress
