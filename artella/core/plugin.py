@@ -362,13 +362,14 @@ class ArtellaPluginsManager(object):
             else:
                 module_path = os.path.splitext('.'.join(reversed(artella_module_parts)))[0]
 
-            try:
-                sub_module_obj = utils.import_module(module_path)
-            except Exception as exc:
-                logger.error('Error while importing Artella Plugin module: {} | {}'.format(module_path, exc))
-                continue
+            module_path_split = module_path.split('.')
+            dcc_module_path = '{}.{}.{}'.format('.'.join(module_path_split[:-1]), dcc_name, module_path_split[-1])
+            sub_module_obj = utils.import_module(dcc_module_path, skip_exceptions=True)
             if not sub_module_obj:
-                continue
+                sub_module_obj = utils.import_module(module_path)
+                if not sub_module_obj:
+                    logger.error('Error while importing Artella Plugin module: {} | {}'.format(module_path, exc))
+                    continue
 
             plugin_version = None
             module_path_dir = module_path.rsplit('.', 1)[0]
