@@ -41,6 +41,39 @@ def is_python3():
     return sys.version_info.major == 3
 
 
+def is_windows():
+    """
+    Returns whether or not current OS platform is Windows
+
+    :return: True if current platform is Windows; False otherwise.
+    :rtype: bool
+    """
+
+    return sys.platform.startswith('win')
+
+
+def is_mac():
+    """
+    Returns whether or not current OS platform is MacOS
+
+    :return: True if current platform is MacOS; False otherwise.
+    :rtype: bool
+    """
+
+    return sys.platform == 'darwin'
+
+
+def is_linux():
+    """
+    Returns whether or not current OS platform is Linux
+
+    :return: True if current platform is Linux; False otherwise.
+    :rtype: bool
+    """
+
+    return 'linux' in sys.platform
+
+
 def clean_path(path):
     """
     Returns a cleaned path to make sure that we do not have problems with path slashes
