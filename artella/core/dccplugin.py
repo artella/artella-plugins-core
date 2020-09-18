@@ -474,6 +474,7 @@ class ArtellaDccPlugin(object):
 
         return artella_drive_client.convert_path(file_path)
 
+    @utils.timestamp
     def update_paths(self, file_path=None, show_dialogs=True, call_post_function=True, skip_save=True):
         """
         Updates all file paths of the given file path to make sure that they point to valid Artella file paths
@@ -499,6 +500,7 @@ class ArtellaDccPlugin(object):
 
         file_paths = utils.force_list(file_path, remove_duplicates=True)
 
+        converted_paths = list()
         for file_path in file_paths:
 
             local_path = artella_drive_client.translate_path(file_path)
@@ -518,13 +520,16 @@ class ArtellaDccPlugin(object):
                 dcc.open_scene(file_path, save=True)
 
             parser = artella.Parser()
-            valid_convert = parser.update_paths(local_path)
+            valid_convert, updated_paths = parser.update_paths(local_path)
+            updated_paths = utils.force_list(updated_paths)
+            converted_paths.extend(updated_paths)
 
-            if valid_convert and not skip_save:
+            if valid_convert and updated_paths and not skip_save:
                 dcc.save_scene()
 
-        if call_post_function:
-            self._post_update_paths()
+        converted_paths = list(set(converted_paths))
+        if call_post_function and converted_paths:
+            self._post_update_paths(files_updated=converted_paths)
 
     # ==============================================================================================================
     # VERSIONS
