@@ -392,12 +392,13 @@ class ArtellaDriveClient(object):
         Returns whether or not given file path is an Artella file path or not
         A path is considered to be an Artella path if the path is located inside the Artella project folder
         in the user machine
+
         :param str file_path: path to check. If not given, current DCC scene file path will be used
         :return: True if the given file path is an Artella path; False otherwise.
         :rtype: bool
         """
 
-        if not file_path or not os.path.isfile(file_path):
+        if not file_path or not os.path.exists(file_path):
             return False
 
         local_root = os.path.normpath(os.path.abspath(self.get_local_root()))
