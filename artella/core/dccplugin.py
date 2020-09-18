@@ -434,6 +434,26 @@ class ArtellaDccPlugin(object):
 
         return artella_drive_client.translate_path(file_path)
 
+    def is_path_translated(self, file_path):
+        """
+        Returns whether or not given path is already translated to a valid Artella path
+
+        :param file_path: str, path you want to check translation validation
+        :return: True if the given path is an already translated Artella path; False otherwise
+        :rtype: bool
+        :example:
+        >>> self.is_path_translated("C:/Users/Bobby/artella-files/ProjectA/Assets/Characters/A/Model/a.ma")
+        False
+        >>> self.is_path_translated("$ART_LOCAL_ROOT/ProjectA/refs/ref.png")
+        True
+        """
+
+        artella_drive_client = self.get_client(show_dialogs=False)
+        if not artella_drive_client:
+            return False
+
+        return artella_drive_client.is_path_translated(file_path)
+
     def convert_path(self, file_path):
         """
         Converts given path to a path that Artella can understand
