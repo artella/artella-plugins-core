@@ -8,7 +8,6 @@ Module that contains Artella DCC Plugin functionality
 from __future__ import print_function, division, absolute_import
 
 import os
-import sys
 import time
 import logging
 import threading
@@ -52,6 +51,18 @@ class ArtellaDccPlugin(object):
         """
 
         return self._dev
+
+    @property
+    def version(self):
+        """
+        Returns current DCC plugin version
+        :return: str or None
+        """
+
+        version_var = 'ARTELLA_{}_PLUGIN'.format(dcc.name())
+        plugin_version = os.environ.get(version_var, None)
+
+        return plugin_version
 
     # ==============================================================================================================
     # INITIALIZATION / SHUTDOWN
