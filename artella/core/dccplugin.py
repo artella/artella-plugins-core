@@ -52,18 +52,6 @@ class ArtellaDccPlugin(object):
 
         return self._dev
 
-    @property
-    def version(self):
-        """
-        Returns current DCC plugin version
-        :return: str or None
-        """
-
-        version_var = 'ARTELLA_{}_PLUGIN'.format(dcc.name())
-        plugin_version = os.environ.get(version_var, None)
-
-        return plugin_version
-
     # ==============================================================================================================
     # INITIALIZATION / SHUTDOWN
     # ==============================================================================================================
@@ -79,6 +67,30 @@ class ArtellaDccPlugin(object):
 
         pass
 
+    def get_version_variable_name(self):
+        """
+        Returns the environment variable name used to store current Arqtella DCC plugin version
+
+        :return: Environment version name
+        :rtype: str
+        """
+
+        return 'ARTELLA_{}_PLUGIN'.format(dcc.name())
+
+    def get_version(self, force_update=False):
+        """
+        Returns current DCC plugin version
+
+        :param bool force_update: Where or not force the update of the current Artella DCC plugin version
+        :return: Version in string format (MAJOR.MINOR.PATH) of the current Artella DCC plugin
+        :rtype: str or None
+        """
+
+        version_var = self.get_version_variable_name()
+        plugin_version = os.environ.get(version_var, None)
+
+        return plugin_version
+
     def init(self, dev=False, show_dialogs=True, create_menu=True, create_callbacks=True, *args, **kwargs):
         """
         Initializes Artella plugin in current DCC.
@@ -92,6 +104,9 @@ class ArtellaDccPlugin(object):
         """
 
         self._dev = dev
+
+        # Initialize DCC plugin version
+        self.get_version(force_update=True)
 
         # Initialize Artella callbacks
         if create_callbacks:
