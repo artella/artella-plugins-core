@@ -26,6 +26,19 @@ def name():
 
 @reroute
 @abstract
+def nice_name():
+    """
+    Returns nice name of current DCC
+
+    :return: Returns formatted DCC name
+    :rtype: str
+    """
+
+    pass
+
+
+@reroute
+@abstract
 def version():
     """
     Returns version of DCC application
