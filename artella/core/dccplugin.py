@@ -598,13 +598,17 @@ class ArtellaDccPlugin(object):
         comment = str(comment) if comment else 'New file version'
 
         file_version = artella_drive_client.file_current_version(file_path)
+        if file_version is None:
+            self.show_warning_message('Unable to retrieve version from current scene')
+            return False
+
         next_version = file_version + 1
 
         is_locked, _, _, _ = artella_drive_client.check_lock(file_path)
         if not is_locked and do_lock:
             valid_lock = self.lock_file()
             if not valid_lock:
-                self.show_error_message( 'Unable to lock file to make new version ({})'.format(next_version))
+                self.show_error_message('Unable to lock file to make new version ({})'.format(next_version))
                 return False
 
         logger.info('Saving current scene: {}'.format(file_path))
