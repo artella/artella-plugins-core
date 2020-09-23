@@ -111,6 +111,10 @@ def init(
     artella.DccPlugin(artella_drive_client).init(
         dev=dev, show_dialogs=False, create_menu=create_menu, create_callbacks=create_callbacks)
 
+    updater_plugin = artella.PluginsMgr().get_plugin_by_id('artella-plugins-updater')
+    if updater_plugin and updater_plugin.update_is_available():
+        updater_plugin.check_for_updates()
+
     return True
 
 
