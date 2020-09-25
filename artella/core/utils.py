@@ -84,7 +84,10 @@ def clean_path(path):
 
     # Convert '~' Unix char to user's home directory and remove spaces and bad slashes
     if is_python2():
-        path = os.path.expanduser(str(path.encode('utf-8')))
+        if isinstance(path, str):
+            path = os.path.expanduser(path)
+        else:
+            path = os.path.expanduser(str(path.encode('utf-8')))
     path = str(path.replace('\\', '/').replace('//', '/').rstrip('/').strip())
 
     # Fix server paths
