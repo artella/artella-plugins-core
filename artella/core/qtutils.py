@@ -44,10 +44,12 @@ if QT_AVAILABLE:
                     pass
 
     # If QApplication does not exists we force its creation
-    app = QtWidgets.QApplication.instance()
-    if not app:
-        QtWidgets.QApplication([])
-
+    try:
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            QtWidgets.QApplication([])
+    except TypeError:
+        QT_AVAILABLE = False
 
 DEFAULT_DPI = 96
 

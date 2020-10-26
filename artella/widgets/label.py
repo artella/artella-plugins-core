@@ -23,7 +23,7 @@ class ArtellaLabelTypes(object):
     H4 = 4
 
 
-if not qtutils:
+if not qtutils.QT_AVAILABLE:
     class ArtellaLabel(object):
         def __init__(self, *args, **kwargs):
             pass
