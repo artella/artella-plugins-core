@@ -28,7 +28,7 @@ except ImportError:
     from urllib2 import urlopen, Request, HTTPError, URLError
 
 import artella
-from artella.core import consts, utils, exceptions
+from artella.core import consts, utils, exceptions, dccplugin
 
 logger = logging.getLogger('artella')
 
@@ -119,8 +119,9 @@ class ArtellaDriveClient(object):
         """
         Checks whether or not current client is available and running
 
-        :param update:
-        :return:
+        :param update: bool, Whether or not remote sessions should be updated
+        :return: True if the client is available and running; False otherwise.
+        :rtype: bool
         """
 
         return self._available and self._running and self.get_remote_sessions(update=update)
@@ -953,6 +954,7 @@ class ArtellaDriveClient(object):
         Returns current version of the given file
 
         :param str file_path: Absolute local file path to retrieve current local version of
+        :param str _status: new file status
         :return: Current local version of the given file path
         :rtype: int
         """
@@ -1327,7 +1329,7 @@ class ArtellaDriveClient(object):
 
             self._available = True
             logger.debug('Message received: {}'.format(msg))
-            artella.DccPlugin().pass_message(msg)
+            dccplugin.DccPlugin().pass_message(msg)
 
         # If Artella Drive Client is nor running we force disconnection
         # self._disconnect()

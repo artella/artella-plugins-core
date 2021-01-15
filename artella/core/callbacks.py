@@ -11,6 +11,10 @@ import inspect
 import logging
 import traceback
 
+from artella import dcc
+from artella.core.dcc import callback
+from artella.core import dcc as dcc_core
+
 # Cache used to store Artella callbacks
 ARTELLA_CALLBACKS_CACHE = dict()
 
@@ -23,13 +27,9 @@ def initialize_callbacks():
     if ARTELLA_CALLBACKS_CACHE:
         return
 
-    import artella
-    from artella import dcc
-    from artella.core import dcc as dcc_core
-
     shutdown_type = None
-    if hasattr(artella.Callbacks, 'ShutdownCallback'):
-        shutdown_type = getattr(artella.Callbacks, 'ShutdownCallback')
+    if hasattr(callback.Callbacks(), 'ShutdownCallback'):
+        shutdown_type = getattr(callback.Callbacks(), 'ShutdownCallback')
 
     for callback_name in dcc_core.callbacks():
         callback_type = getattr(dcc_core.DccCallbacks, callback_name)[1]['type']
@@ -40,7 +40,7 @@ def initialize_callbacks():
         else:
             callback_type = SimpleCallbackWrapper
 
-        callback_class = getattr(artella.Callbacks, '{}Callback'.format(callback_name), None)
+        callback_class = getattr(callback.Callbacks(), '{}Callback'.format(callback_name), None)
         if not callback_class:
             logger.warning(
                 'Dcc {} does not provides a Callback implementation for {}Callback. Skipping ...'.format(

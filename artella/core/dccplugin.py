@@ -12,10 +12,8 @@ import time
 import logging
 import threading
 
-import artella
-import artella.dcc as dcc
-import artella.register as register
-from artella.core import utils, qtutils, splash, client
+from artella import dcc
+from artella.core import utils, qtutils, callbacks, splash
 from artella.widgets import snackbar
 
 if qtutils.QT_AVAILABLE:
@@ -23,14 +21,33 @@ if qtutils.QT_AVAILABLE:
 
 logger = logging.getLogger('artella')
 
+_DCC_PLUGIN = None
 
-class ArtellaDccPlugin(object):
+
+class _MetaDccPlugin(type):
+
+    def __call__(cls, *args, **kwargs):
+
+        global _DCC_PLUGIN
+        if _DCC_PLUGIN:
+            return _DCC_PLUGIN
+
+        if dcc.is_maya():
+            from artella.dccs.maya import plugin
+            _DCC_PLUGIN = type.__call__(plugin.ArtellaMayaPlugin, *args, **kwargs)
+        else:
+            _DCC_PLUGIN = type.__call__(BaseArtellaDccPlugin, *args, **kwargs)
+
+        return _DCC_PLUGIN
+
+
+class BaseArtellaDccPlugin(object):
 
     MENU_NAME = 'Artella'
     _ASYNC_INVOKER, _SYNC_INVOKER = range(2)
 
     def __init__(self, artella_drive_client):
-        super(ArtellaDccPlugin, self).__init__()
+        super(BaseArtellaDccPlugin, self).__init__()
 
         self._artella_drive_client = artella_drive_client
         self._dev = False
@@ -265,9 +282,7 @@ class ArtellaDccPlugin(object):
         :return:
         """
 
-        import artella.core.callback as callback
-
-        callback.initialize_callbacks()
+        callbacks.initialize_callbacks()
 
     def remove_callbacks(self):
         """
@@ -275,9 +290,7 @@ class ArtellaDccPlugin(object):
         :return:
         """
 
-        import artella.core.callback as callback
-
-        callback.uninitialize_callbacks()
+        callbacks.uninitialize_callbacks()
 
     def validate_environment_for_callback(self, callback_name):
         """
@@ -316,6 +329,9 @@ class ArtellaDccPlugin(object):
         :return: Instance of current ArtellaDriveClient being used; None if not Artella Drive Client is being used.
         :rtype: ArtellaDriveClient or None
         """
+
+        # To avoid cyclic imports
+        from artella.core import client
 
         if not self._artella_drive_client:
             # TODO: Here we are not taking into account custom extensions (check loader). We should store them
@@ -504,6 +520,7 @@ class ArtellaDccPlugin(object):
     def update_paths(self, file_path=None, show_dialogs=True, call_post_function=True, skip_save=True):
         """
         Updates all file paths of the given file path to make sure that they point to valid Artella file paths
+
         :param str file_path:
         :param bool show_dialogs:
         :param bool call_post_function:
@@ -536,7 +553,7 @@ class ArtellaDccPlugin(object):
                 logger.info('Skipping non DCC scene file path from conversion: "{}"'.format(local_path))
                 continue
 
-            can_lock = artella.DccPlugin().can_lock_file(local_path, show_dialogs=False)
+            can_lock = self.can_lock_file(local_path, show_dialogs=False)
             if not can_lock:
                 logger.warning(
                     'File "{}" cannot be locked and paths cannot be updated. Skipping ...'.format(local_path))
@@ -898,12 +915,12 @@ class ArtellaDccPlugin(object):
 
     def show_artella_message(self, text, title='', duration=None, closable=True):
         """
-        Shows an artella message
-        :param text:
-        :param title:
-        :param duration:
-        :param closable:
-        :return:
+        Shows an Artella message
+
+        :param text: str, artella text to show
+        :param title: str, title of the artella message
+        :param duration: float or None, if given, message only will appear the specified seconds
+        :param closable: bool, Whether the message can be closed by the user or not (when duration is given)
         """
 
         logger.debug(str(text))
@@ -915,11 +932,11 @@ class ArtellaDccPlugin(object):
     def show_success_message(self, text, title='', duration=None, closable=True):
         """
         Shows a success message
-        :param text:
-        :param title:
-        :param duration:
-        :param closable:
-        :return:
+
+        :param text: str, success text to show
+        :param title: str, title of the success message
+        :param duration: float or None, if given, message only will appear the specified seconds
+        :param closable: bool, Whether the message can be closed by the user or not (when duration is given)
         """
 
         logger.info(str(text))
@@ -931,11 +948,11 @@ class ArtellaDccPlugin(object):
     def show_info_message(self, text, title='', duration=None, closable=True):
         """
         Shows an info message
-        :param text:
-        :param title:
-        :param duration:
-        :param closable:
-        :return:
+
+        :param text: str, info text to show
+        :param title: str, title of the info message
+        :param duration: float or None, if given, message only will appear the specified seconds
+        :param closable: bool, Whether the message can be closed by the user or not (when duration is given)
         """
 
         logger.info(str(text))
@@ -947,11 +964,11 @@ class ArtellaDccPlugin(object):
     def show_warning_message(self, text, title='', duration=None, closable=True):
         """
         Shows a warning message
-        :param text:
-        :param title:
-        :param duration:
-        :param closable:
-        :return:
+
+        :param text: str, warning text to show
+        :param title: str, title of the warning message
+        :param duration: float or None, if given, message only will appear the specified seconds
+        :param closable: bool, Whether the message can be closed by the user or not (when duration is given)
         """
 
         logger.warning(str(text))
@@ -963,10 +980,11 @@ class ArtellaDccPlugin(object):
     def show_error_message(self, text, title='', duration=None, closable=True):
         """
         Shows an error message
-        :param text:
-        :param title:
-        :param duration:
-        :param closable:
+
+        :param text: str, error text to show
+        :param title: str, title of the error message
+        :param duration: float or None, if given, message only will appear the specified seconds
+        :param closable: bool, Whether the message can be closed by the user or not (when duration is given)
         :return:
         """
 
@@ -1184,10 +1202,6 @@ class ArtellaDccPlugin(object):
         pass
 
 
-@utils.Singleton
-class ArtellaDccPluginSingleton(ArtellaDccPlugin, object):
-    def __init__(self, artella_drive_client=None):
-        ArtellaDccPlugin.__init__(self, artella_drive_client=artella_drive_client)
-
-
-register.register_class('DccPlugin', ArtellaDccPluginSingleton)
+@utils.add_metaclass(_MetaDccPlugin)
+class DccPlugin(BaseArtellaDccPlugin):
+    pass

@@ -9,8 +9,8 @@ from __future__ import print_function, division, absolute_import
 
 import logging
 
-import artella
-from artella.core import qtutils, utils
+from artella.core.dcc import dialog
+from artella.core import utils, qtutils, resource
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets, QtGui
@@ -98,7 +98,7 @@ else:
             painter.end()
 
 
-class SplashDialog(artella.Dialog, object):
+class SplashDialog(dialog.Dialog(), object):
     def __init__(self, parent=None, **kwargs):
         super(SplashDialog, self).__init__(parent, use_artella_header=False, **kwargs)
 
@@ -115,7 +115,7 @@ class SplashDialog(artella.Dialog, object):
         self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.FramelessWindowHint | QtCore.Qt.WA_DeleteOnClose)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
-        splash_pixmap = artella.ResourcesMgr().pixmap('artella_splash')
+        splash_pixmap = resource.pixmap('artella_splash')
         splash = SplashScreen(splash_pixmap)
         splash.setMask(splash_pixmap.mask())
         self._splash_layout = QtWidgets.QVBoxLayout()

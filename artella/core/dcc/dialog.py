@@ -7,18 +7,34 @@ Module that contains DCC abstract dialog implementation
 
 from __future__ import print_function, division, absolute_import
 
-import artella
-from artella import register
-from artella.core import qtutils
+from artella.core import utils, qtutils, resource
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets
 
+
+class _MetaDialog(type):
+
+    def __call__(cls, *args, **kwargs):
+        return BaseDialog
+
+
+class AbstractDialog(object):
+
+    @utils.abstract
+    def get_main_layout(self):
+        pass
+
+    @utils.abstract
+    def setup_ui(self):
+        pass
+
+
 if not qtutils.QT_AVAILABLE:
-    class AbstractDialog(object):
+    class BaseDialog(AbstractDialog):
         pass
 else:
-    class AbstractDialog(QtWidgets.QDialog, object):
+    class BaseDialog(QtWidgets.QDialog, object):
 
         closed = QtCore.Signal()
 
@@ -29,7 +45,7 @@ else:
 
             self._use_artella_header = kwargs.pop('use_artella_header', True)
 
-            super(AbstractDialog, self).__init__(parent, **kwargs)
+            super(BaseDialog, self).__init__(parent, **kwargs)
 
             self._pos_anim = QtCore.QPropertyAnimation(self)
             self._pos_anim.setTargetObject(self)
@@ -67,7 +83,7 @@ else:
                 artella_frame.setStyleSheet('background: rgb(23, 165, 151)')
 
                 artella_header = QtWidgets.QLabel()
-                artella_header_pixmap = artella.ResourcesMgr().pixmap('artella_header')
+                artella_header_pixmap = resource.pixmap('artella_header')
                 artella_header.setPixmap(artella_header_pixmap)
                 artella_frame_layout.addStretch()
                 artella_frame_layout.addWidget(artella_header)
@@ -94,4 +110,6 @@ else:
             self._opacity_anim.start()
 
 
-register.register_class('Dialog', AbstractDialog)
+@utils.add_metaclass(_MetaDialog)
+class Dialog(AbstractDialog):
+    pass

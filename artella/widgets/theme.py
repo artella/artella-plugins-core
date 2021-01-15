@@ -7,8 +7,10 @@ Module that contains object to manage Artella widgets theme
 
 from __future__ import print_function, division, absolute_import
 
-import artella
 from artella.widgets import color
+from artella.core import resource
+
+_ARTELLA_THEME = None
 
 
 class ArtellaTheme(object):
@@ -20,7 +22,7 @@ class ArtellaTheme(object):
         self._init_colors()
         self.set_main_color(main_color or color.ArtellaColors.DEFAULT)
 
-        self._default_style = artella.ResourcesMgr().style('artella')
+        self._default_style = resource.style('artella')
         self.unit = 'px'
         self.default_size = self.medium
         self.text_error_color = self.error_7
@@ -131,3 +133,18 @@ class ArtellaTheme(object):
         self.background_out_color = "#494949"
         self.mask_color = color.fade_color(self.background_color, '90%')
         self.toast_color = "#555555"
+
+
+def theme():
+    """
+    Returns Artella theme
+    :return: ArtellaTheme
+    """
+
+    global _ARTELLA_THEME
+    if _ARTELLA_THEME:
+        return _ARTELLA_THEME
+
+    _ARTELLA_THEME = ArtellaTheme(main_color=color.ArtellaColors.DEFAULT)
+
+    return _ARTELLA_THEME

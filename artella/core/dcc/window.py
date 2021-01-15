@@ -7,27 +7,45 @@ Module that contains DCC abstract window implementation
 
 from __future__ import print_function, division, absolute_import
 
-import artella
-from artella import register
-from artella.core import qtutils
+from artella import dcc
+from artella.core import utils, qtutils, resource
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets
 
+
+class _MetaWindow(type):
+
+    def __call__(cls, *args, **kwargs):
+        if dcc.is_maya():
+            from artella.dccs.maya import window
+            return window.MayaWindow
+        else:
+            return BaseWindow
+
+
+class AbstractWindow(object):
+
+    @utils.abstract
+    def get_main_layout(self):
+        pass
+
+    @utils.abstract
+    def setup_ui(self):
+        pass
+
+
 if not qtutils.QT_AVAILABLE:
-    class AbstractWindow(object):
+    class BaseWindow(object):
         pass
 else:
-    class AbstractWindow(QtWidgets.QMainWindow):
+    class BaseWindow(QtWidgets.QMainWindow):
         def __init__(self, parent=None, **kwargs):
-
-            closed = QtCore.Signal()
-
             if not parent:
                 from artella import dcc
                 parent = dcc.get_main_window()
 
-            super(AbstractWindow, self).__init__(parent, **kwargs)
+            super(BaseWindow, self).__init__(parent, **kwargs)
 
             self._pos_anim = QtCore.QPropertyAnimation(self)
             self._pos_anim.setTargetObject(self)
@@ -66,7 +84,7 @@ else:
             artella_frame.setStyleSheet('background: rgb(23, 165, 151)')
 
             artella_header = QtWidgets.QLabel()
-            artella_header_pixmap = artella.ResourcesMgr().pixmap('artella_header')
+            artella_header_pixmap = resource.pixmap('artella_header')
             artella_header.setPixmap(artella_header_pixmap)
             artella_frame_layout.addStretch()
             artella_frame_layout.addWidget(artella_header)
@@ -93,4 +111,6 @@ else:
             self._opacity_anim.start()
 
 
-register.register_class('Window', AbstractWindow)
+@utils.add_metaclass(_MetaWindow)
+class Window(AbstractWindow):
+    pass

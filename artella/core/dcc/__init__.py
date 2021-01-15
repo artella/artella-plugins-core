@@ -118,7 +118,7 @@ def reroute(fn):
 
         # From the current function and DCC we retrieve module path where DCC implementation should be located
         fn_split = fn.__module__.split('.')
-        dcc_reroute_path = '{}.{}.{}'.format(consts.ARTELLA_DCCS_NAMESPACE, dcc, '.'.join(fn_split[3:]))
+        dcc_reroute_path = '{}.{}.{}'.format(consts.ARTELLA_DCCS_NAMESPACE, dcc, fn_split[-1])
         dcc_reroute_fn_path = '{}.{}'.format(dcc_reroute_path, fn.__name__)
         if dcc_reroute_fn_path not in DCC_REROUTE_CACHE:
             try:

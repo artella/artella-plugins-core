@@ -5,9 +5,19 @@
 Module that contains DCC abstract callback implementation
 """
 
-from artella import register
+from artella import dcc
 from artella.core.dcc import reroute
-from artella.core.utils import abstract
+from artella.core.utils import abstract, add_metaclass
+
+
+class _MetaCallbacks(type):
+
+    def __call__(cls, *args, **kwargs):
+        if dcc.is_maya():
+            from artella.dccs.maya import callback as maya_callback
+            return maya_callback.Callbacks
+        else:
+            return AbstractCallback
 
 
 class AbstractCallback(object):
@@ -54,7 +64,7 @@ class AbstractCallback(object):
         pass
 
 
-class Callbacks(object):
+class AbstractCallbacks(object):
     """
     Class that contains all supported callback definitions
     """
@@ -109,4 +119,6 @@ class Callbacks(object):
         pass
 
 
-register.register_class('Callbacks', Callbacks)
+@add_metaclass(_MetaCallbacks)
+class Callbacks(AbstractCallbacks):
+    pass

@@ -7,7 +7,6 @@ Module that contains DCC abstract scene file parser implementation
 
 from __future__ import print_function, division, absolute_import
 
-from artella import register
 from artella.core.dcc import reroute
 from artella.core.utils import abstract
 
@@ -42,6 +41,3 @@ class AbstractSceneParser(object):
         """
 
         pass
-
-
-register.register_class('Parser', AbstractSceneParser)

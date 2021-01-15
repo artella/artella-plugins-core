@@ -15,7 +15,6 @@ try:
 except ImportError:
     from io import StringIO
 
-import artella
 from artella.core import utils
 
 QT_AVAILABLE = True
@@ -389,9 +388,10 @@ def show_warning_message_box(title, text, parent=None):
         return
 
     from artella import dcc
+    from artella.core import resource
 
     parent = parent if parent else dcc.get_main_window()
-    window_icon = artella.ResourcesMgr().icon('artella')
+    window_icon = resource.icon('artella')
 
     message_box = QtWidgets.QMessageBox(parent)
     message_box.setWindowTitle(title)
@@ -419,9 +419,10 @@ def show_error_message_box(title, text, parent=None):
         return
 
     from artella import dcc
+    from artella.core import resource
 
     parent = parent if parent else dcc.get_main_window()
-    window_icon = artella.ResourcesMgr().icon('artella')
+    window_icon = resource.icon('artella')
 
     message_box = QtWidgets.QMessageBox(parent)
     message_box.setWindowTitle(title)

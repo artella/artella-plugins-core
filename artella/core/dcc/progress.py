@@ -7,7 +7,18 @@ Module that contains DCC abstract progress bar implementation
 
 from __future__ import print_function, division, absolute_import
 
-from artella import register
+from artella import dcc
+from artella.core.utils import abstract, add_metaclass
+
+
+class _MetaProgressBar(type):
+
+    def __call__(cls, *args, **kwargs):
+        if dcc.is_maya():
+            from artella.dccs.maya import progress as maya_progress
+            return type.__call__(maya_progress.MayaProgressBar, *args, **kwargs)
+        else:
+            return type.__call__(AbstractProgressBar, *args, **kwargs)
 
 
 class AbstractProgressBar(object):
@@ -15,6 +26,7 @@ class AbstractProgressBar(object):
     Class that defines basic progress bar abstract functions
     """
 
+    @abstract
     def can_be_interrupted(self):
         """
         Returns whether or not DCC progress bar can be interrupted or not
@@ -24,6 +36,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def is_cancelled(self):
         """
         Returns whether or not DCC progress bar has been cancelled by the user
@@ -34,6 +47,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def get_max_progress_value(self):
         """
         Returns the maximum value of the progress bar
@@ -54,6 +68,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def set_min_progress_value(self, min_value):
         """
         Sets the minimum value of the progress bar
@@ -72,6 +87,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def get_progress_value(self):
         """
         Returns current progress value of the progress bar
@@ -82,6 +98,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def set_progress_value(self, value):
         """
         Sets the current progress value of the progress bar
@@ -91,6 +108,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def increment_value(self, increment=1):
         """
         Increments current progress value with the given increment
@@ -100,6 +118,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def get_status(self):
         """
         Returns current status text of the progress bar
@@ -110,6 +129,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def set_status(self, status_text):
         """
         Sets current status text of the progress bar
@@ -119,6 +139,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def start(self, title='', status='', min_count=0, max_count=100):
         """
         Starts progress bar execution
@@ -130,6 +151,7 @@ class AbstractProgressBar(object):
 
         pass
 
+    @abstract
     def end(self):
         """
         Ends progress bar execution
@@ -138,4 +160,51 @@ class AbstractProgressBar(object):
         pass
 
 
-register.register_class('ProgressBar', AbstractProgressBar)
+class BaseProgressBar(object):
+    def can_be_interrupted(self):
+        return False
+
+    def is_cancelled(self):
+        return True
+
+    @abstract
+    def get_max_progress_value(self):
+        return 100
+
+    def get_min_progress_value(self):
+        return 0
+
+    @abstract
+    def set_min_progress_value(self, min_value):
+        pass
+
+    def set_max_progress_value(self, max_value):
+        pass
+
+    def get_progress_value(self):
+        pass
+
+    def set_progress_value(self, value):
+        pass
+
+    def increment_value(self, increment=1):
+        pass
+
+    def get_status(self):
+        pass
+
+    def set_status(self, status_text):
+        pass
+
+    @abstract
+    def start(self, title='', status='', min_count=0, max_count=100):
+        pass
+
+    @abstract
+    def end(self):
+        pass
+
+
+@add_metaclass(_MetaProgressBar)
+class ProgressBar(AbstractProgressBar):
+    pass

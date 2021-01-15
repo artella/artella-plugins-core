@@ -7,8 +7,8 @@ Module that contains widget to show images
 
 from __future__ import print_function, division, absolute_import
 
-import artella
-from artella.core import qtutils
+from artella.core import qtutils, resource
+from artella.widgets import theme
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets, QtGui
@@ -23,10 +23,10 @@ else:
         def __init__(self, parent=None):
             super(ArtellaImage, self).__init__(parent)
 
-            self._default_pixmap = artella.ResourcesMgr().pixmap('artella')
+            self._default_pixmap = resource.pixmap('artella')
             self._pixmap = self._default_pixmap
             self._artella_size = 0
-            self.set_artella_size(artella.theme.default_size)
+            self.set_artella_size(theme.theme().default_size)
 
         def set_artella_size(self, value):
             self._artella_size = value
@@ -65,34 +65,34 @@ else:
         @classmethod
         def tiny(cls, image=None):
             inst = cls()
-            inst.set_artella_size(artella.theme.tiny)
+            inst.set_artella_size(theme.theme().tiny)
             inst.set_artella_image(image)
             return inst
 
         @classmethod
         def small(cls, image=None):
             inst = cls()
-            inst.set_artella_size(artella.theme.small)
+            inst.set_artella_size(theme.theme().small)
             inst.set_artella_image(image)
             return inst
 
         @classmethod
         def medium(cls, image=None):
             inst = cls()
-            inst.set_artella_size(artella.theme.medium)
+            inst.set_artella_size(theme.theme().medium)
             inst.set_artella_image(image)
             return inst
 
         @classmethod
         def large(cls, image=None):
             inst = cls()
-            inst.set_artella_size(artella.theme.large)
+            inst.set_artella_size(theme.theme().large)
             inst.set_artella_image(image)
             return inst
 
         @classmethod
         def huge(cls, image=None):
             inst = cls()
-            inst.set_artella_size(artella.theme.huge)
+            inst.set_artella_size(theme.theme().huge)
             inst.set_artella_image(image)
             return inst

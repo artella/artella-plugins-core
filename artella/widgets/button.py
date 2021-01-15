@@ -7,8 +7,8 @@ Module that contains Artella button widgets
 
 from __future__ import print_function, division, absolute_import
 
-import artella
-from artella.core import qtutils
+from artella.core import qtutils, resource
+from artella.widgets import theme
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets
@@ -24,7 +24,7 @@ else:
             super(ArtellaToolButton, self).__init__(parent=parent)
 
             self._artella_image = None
-            self._artella_size = artella.theme.default_size
+            self._artella_size = theme.theme().default_size
 
             self.setAutoExclusive(False)
             self.setAutoRaise(True)
@@ -35,7 +35,7 @@ else:
 
         def enterEvent(self, event):
             if self._artella_image:
-                self.setIcon(artella.ResourcesMgr().icon(self._artella_image, color=artella.theme.main_color))
+                self.setIcon(resource.icon(self._artella_image, color=theme.theme().main_color))
             return super(ArtellaToolButton, self).enterEvent(event)
 
         def leaveEvent(self, event):
@@ -61,23 +61,23 @@ else:
         artella_size = QtCore.Property(int, get_artella_size, set_artella_size)
 
         def huge(self):
-            self.set_artella_size(artella.theme.huge)
+            self.set_artella_size(theme.theme().huge)
             return self
 
         def large(self):
-            self.set_artella_size(artella.theme.large)
+            self.set_artella_size(theme.theme().large)
             return self
 
         def medium(self):
-            self.set_artella_size(artella.theme.medium)
+            self.set_artella_size(theme.theme().medium)
             return self
 
         def small(self):
-            self.set_artella_size(artella.theme.small)
+            self.set_artella_size(theme.theme().small)
             return self
 
         def tiny(self):
-            self.set_artella_size(artella.theme.tiny)
+            self.set_artella_size(theme.theme().tiny)
             return self
 
         def image(self, path):
@@ -104,6 +104,6 @@ else:
         def _polish_icon(self, *args, **kwargs):
             if self._artella_image:
                 if self.isCheckable() and self.isChecked():
-                    self.setIcon(artella.ResourcesMgr().icon(self._artella_image, color=artella.theme.main_color))
+                    self.setIcon(resource.icon(self._artella_image, color=theme.theme().main_color))
                 else:
-                    self.setIcon(artella.ResourcesMgr().icon(self._artella_image))
+                    self.setIcon(resource.icon(self._artella_image))

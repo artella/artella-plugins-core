@@ -7,10 +7,9 @@ Module that contains Artella Snackbar widget
 
 from __future__ import print_function, division, absolute_import
 
-import artella
 from artella import dcc
-from artella.core import qtutils
-from artella.widgets import image, label, button, divider
+from artella.core import qtutils, resource
+from artella.widgets import image, label, button, divider, theme
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets
@@ -66,7 +65,7 @@ else:
 
             artella_label_layout = QtWidgets.QHBoxLayout()
             artella_label = image.ArtellaImage.small()
-            artella_label.set_artella_image(artella.ResourcesMgr().pixmap('artella_white'))
+            artella_label.set_artella_image(resource.pixmap('artella_white'))
             self._close_btn = button.ArtellaToolButton(parent=self).image('close').tiny().icon_only()
             self._close_btn.setVisible(closable or False)
             self._close_btn.clicked.connect(self.close)
@@ -86,8 +85,7 @@ else:
 
             self._icon_label = image.ArtellaImage.small()
             self._icon_label.set_artella_image(
-                artella.ResourcesMgr().pixmap(
-                    '{}'.format(current_type), color=vars(artella.theme).get(current_type + '_color')))
+               resource.pixmap('{}'.format(current_type), color=vars(theme.theme()).get(current_type + '_color')))
 
             self._content_label = label.ArtellaLabel(parent=self)
             self._content_label.setText(text)
@@ -119,7 +117,7 @@ else:
         def artella(cls, text, title='', parent=None, duration=None, closable=None):
             inst = cls(text, title=title, artella_type=SnackBarTypes.ARTELLA,
                        duration=duration, closable=closable, parent=parent)
-            artella.theme.apply(inst)
+            theme.theme().apply(inst)
             inst.show()
 
             return inst
@@ -128,7 +126,7 @@ else:
         def info(cls, text, title='', parent=None, duration=None, closable=None):
             inst = cls(text, title=title, artella_type=SnackBarTypes.INFO,
                        duration=duration, closable=closable, parent=parent)
-            artella.theme.apply(inst)
+            theme.theme().apply(inst)
             inst.show()
 
             return inst
@@ -137,7 +135,7 @@ else:
         def success(cls, text, title='', parent=None, duration=None, closable=None):
             inst = cls(text, title=title, artella_type=SnackBarTypes.SUCCESS,
                        duration=duration, closable=closable, parent=parent)
-            artella.theme.apply(inst)
+            theme.theme().apply(inst)
             inst.show()
 
             return inst
@@ -146,7 +144,7 @@ else:
         def warning(cls, text, title='', parent=None, duration=None, closable=None):
             inst = cls(text, title=title, artella_type=SnackBarTypes.WARNING,
                        duration=duration, closable=closable, parent=parent)
-            artella.theme.apply(inst)
+            theme.theme().apply(inst)
             inst.show()
 
             return inst
@@ -155,7 +153,7 @@ else:
         def error(cls, text, title='', parent=None, duration=None, closable=None):
             inst = cls(text, title=title, artella_type=SnackBarTypes.ERROR,
                        duration=duration, closable=closable, parent=parent)
-            artella.theme.apply(inst)
+            theme.theme().apply(inst)
             inst.show()
 
             return inst
