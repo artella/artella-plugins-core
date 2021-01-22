@@ -120,6 +120,54 @@ def translate_path(file_path):
     return dccplugin.DccPlugin().translate_path(file_path)
 
 
+def is_artella_path(file_path=None):
+    """
+    Returns whether or not given file path is an Artella file path or not
+    A path is considered to be an Artella path if the path is located inside the Artella project folder
+    in the user machine
+
+    :param str file_path: path to check. If not given, current DCC scene file path will be used
+    :return: True if the given file path is an Artella path; False otherwise.
+    :rtype: bool
+    """
+
+    return dccplugin.DccPlugin().is_artella_path(file_path)
+
+
+def is_path_translated(file_path):
+    """
+    Returns whether or not given path is already translated to a valid Artella path
+
+    :param file_path: str, path you want to check translation validation
+    :return: True if the given path is an already translated Artella path; False otherwise
+    :rtype: bool
+    :example:
+    >>> self.is_path_translated("C:/Users/Bobby/artella-files/ProjectA/Assets/Characters/A/Model/a.ma")
+    False
+    >>> self.is_path_translated("$ART_LOCAL_ROOT/ProjectA/refs/ref.png")
+    True
+    """
+
+    return dccplugin.DccPlugin().is_path_translated(file_path)
+
+
+def convert_path(file_path):
+    """
+    Converts given path to a path that Artella can understand
+
+    :param str file_path: File path we want to convert
+    :return: str
+    :rtype: str
+    :example:
+    >>> self.translate_path("C:/Users/Bobby/artella-files/ProjectA/Assets/Characters/A/Model/a.ma")
+    "$$ART_LOCAL_ROOT/ProjectA/Assets/Characters/A/Model/a.ma"
+    >>> self.translate_path("/ProjectA/Assets/Characters/A/Model/a.ma")
+    "$ART_LOCAL_ROOT/ProjectA/Assets/Characters/A/Model/a.ma"
+    """
+
+    return dccplugin.DccPlugin().convert_path(file_path)
+
+
 def download_file(file_path, show_dialogs=True):
     """
     Downloads a file from Artella server
