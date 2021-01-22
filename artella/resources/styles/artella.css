@@ -4,15 +4,15 @@
  --------------------------------------------------------------------------
 */
 
-*
-{
-    font-family: @font_family;
-    color: @main_text_color;
-    background-color: @background_color;
-    font-size: @font_size_base@unit;
-    selection-color: @text_color_inverse;
-    selection-background-color: @main_color;
-}
+/***/
+/*{*/
+/*    font-family: @font_family;*/
+/*    color: @main_text_color;*/
+/*    background-color: @background_color;*/
+/*    font-size: @font_size_base@unit;*/
+/*    selection-color: @text_color_inverse;*/
+/*    selection-background-color: @main_color;*/
+/*}*/
 
 /*
 ArtellaImage
@@ -23,7 +23,7 @@ ArtellaImage
     background-color: transparent;
 }
 
-/* 
+/*
 ArtellaLabel
 */
 
@@ -158,4 +158,10 @@ ArtellaDivider
     border-radius: 0px;
     color: red;
     background-color: red;
+}
+
+
+QFrame#artellaFrame
+{
+    background: rgb(23, 165, 151)
 }
