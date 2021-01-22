@@ -449,7 +449,7 @@ def timestamp(f):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         res = f(*args, **kwargs)
-        logger.warning('<{}> Elapsed time : {}'.format(f.func_name, time.time() - start_time))
+        logger.info('<{}> Elapsed time : {}'.format(f.func_name, time.time() - start_time))
         return res
     return wrapper
 
