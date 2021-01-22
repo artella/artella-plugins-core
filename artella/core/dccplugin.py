@@ -177,9 +177,6 @@ class BaseArtellaDccPlugin(object):
         :rtype: bool
         """
 
-        if not self._artella_drive_client:
-            return False
-
         # Remove Artella callbacks
         self.remove_callbacks()
 
@@ -188,6 +185,9 @@ class BaseArtellaDccPlugin(object):
             self.remove_menus()
         else:
             dcc.execute_deferred(self.remove_menus)
+
+        if not self._artella_drive_client:
+            return False
 
         self._artella_drive_client.artella_drive_disconnect()
         self._artella_drive_client = None
@@ -427,6 +427,7 @@ class BaseArtellaDccPlugin(object):
         Returns whether or not given file path is an Artella file path or not
         A path is considered to be an Artella path if the path is located inside the Artella project folder
         in the user machine
+
         :param str file_path: path to check. If not given, current DCC scene file path will be used
         :return: True if the given file path is an Artella path; False otherwise.
         :rtype: bool
@@ -1104,7 +1105,7 @@ class BaseArtellaDccPlugin(object):
                     """
 
                     # Acquire lock to make sure that both function and result are not overwritten by synchronous calls
-                    # to this method from differnt threads
+                    # to this method from different threads
                     self._lock.acquire()
 
                     try:
@@ -1203,5 +1204,5 @@ class BaseArtellaDccPlugin(object):
 
 
 @utils.add_metaclass(_MetaDccPlugin)
-class DccPlugin(BaseArtellaDccPlugin):
+class DccPlugin(object):
     pass
