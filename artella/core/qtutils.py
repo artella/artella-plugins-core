@@ -457,3 +457,27 @@ def dpi_scale(value):
 
     mult = dpi_multiplier()
     return value * mult
+
+
+def clear_layout(layout):
+    """
+    Removes all the widgets added in the given layout
+    :param layout: QLayout
+    """
+
+    while layout.count():
+        child = layout.takeAt(0)
+        if child.widget() is not None:
+            child.widget().deleteLater()
+        elif child.layout() is not None:
+            clear_layout(child.layout())
+
+
+def is_stackable(widget):
+    """
+    Returns whether or not given widget is stackable
+    :param widget: QWidget
+    :return: bool
+    """
+
+    return issubclass(widget, QtWidgets.QWidget) and hasattr(widget, 'widget') and hasattr(widget, 'currentChanged')
