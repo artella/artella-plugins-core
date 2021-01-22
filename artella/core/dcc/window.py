@@ -9,6 +9,7 @@ from __future__ import print_function, division, absolute_import
 
 from artella import dcc
 from artella.core import utils, qtutils, resource
+from artella.widgets import theme
 
 if qtutils.QT_AVAILABLE:
     from artella.externals.Qt import QtCore, QtWidgets
@@ -62,6 +63,7 @@ else:
             self._opacity_anim.setEndValue(1.0)
 
             self.setup_ui()
+            theme.theme().apply(self)
 
             self._fade_in()
 
@@ -79,9 +81,9 @@ else:
             self.setCentralWidget(main_widget)
 
             artella_frame = QtWidgets.QFrame()
+            artella_frame.setObjectName('artellaFrame')
             artella_frame_layout = QtWidgets.QHBoxLayout()
             artella_frame.setLayout(artella_frame_layout)
-            artella_frame.setStyleSheet('background: rgb(23, 165, 151)')
 
             artella_header = QtWidgets.QLabel()
             artella_header_pixmap = resource.pixmap('artella_header')
