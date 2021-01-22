@@ -1082,7 +1082,9 @@ class ArtellaDriveClient(object):
         tx_bytes_total = 0
         batches_complete = set()
 
-        for batch_id in self._batch_ids:
+        batch_ids = list(self._batch_ids)[:]
+
+        for batch_id in batch_ids:
             params = urlencode({'batch-id': batch_id, 'details': True})
             req = Request('http://{}:{}/v2/localserve/progress/summary?{}'.format(self._host, self._port, params))
             rsp = self._communicate(req)
