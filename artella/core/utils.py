@@ -180,6 +180,20 @@ def get_files(root_folder, pattern='*'):
     return list(set(files_found))
 
 
+def get_file_size(file_path, round_value=2):
+    """
+    Returns the size of the given file
+    :param file_path: str
+    :param round_value: int, value to round size to
+    :return: str
+    """
+
+    size = os.path.getsize(file_path)
+    size_format = round(size * 0.000001, round_value)
+
+    return size_format
+
+
 def open_folder(path):
     """
     Open folder using OS default settings

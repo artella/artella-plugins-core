@@ -71,6 +71,20 @@ def is_houdini():
     return 'hou' in main.__dict__
 
 
+def is_unreal():
+    """
+    Checks if Unreal is available or not
+    :return: bool
+    """
+
+    try:
+        import unreal
+    except ImportError:
+        return False
+
+    return True
+
+
 @reroute
 @abstract
 def name():
@@ -138,7 +152,7 @@ def scene_name():
 
 @reroute
 @abstract
-def new_scene(force=True):
+def new_scene(force=True, **kwargs):
     """
     Creates a new scene inside DCC
     :param force: True to skip saving of the current opened DCC scene; False otherwise.
