@@ -86,6 +86,8 @@ def current_dcc():
         dcc_namespace_split = dcc_name.split('-')
         dcc_names = [dcc_name, dcc_namespace_split[-1]] if dcc_namespace_split else [dcc_name]
         for dcc in dcc_names:
+            if dcc.startswith('artella'):
+                continue
             try:
                 dcc_module_name = '{}.{}'.format(consts.ARTELLA_DCCS_NAMESPACE, dcc)
                 import_module(dcc_module_name)

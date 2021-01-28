@@ -35,6 +35,9 @@ class _MetaDccPlugin(type):
         if dcc.is_maya():
             from artella.dccs.maya import plugin
             _DCC_PLUGIN = type.__call__(plugin.ArtellaMayaPlugin, *args, **kwargs)
+        elif dcc.is_unreal():
+            from artella.dccs.unreal import plugin
+            _DCC_PLUGIN = type.__call__(plugin.ArtellaUnrealPlugin, *args, **kwargs)
         else:
             _DCC_PLUGIN = type.__call__(BaseArtellaDccPlugin, *args, **kwargs)
 
