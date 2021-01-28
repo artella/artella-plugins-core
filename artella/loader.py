@@ -77,8 +77,6 @@ def init(
 
     register_dcc_paths(dcc_paths)
 
-    shutdown(dev=dev)
-
     plugins_path = plugin_paths if plugin_paths is not None else list()
     extensions = extensions if extensions is not None else list()
 
@@ -89,6 +87,8 @@ def init(
     if not current_dcc:
         artella_logger.error('Impossible to load Artella Plugin because no DCC is available!')
         return False
+
+    shutdown(dev=dev)
 
     # Specific DCC extensions are managed by the client
     dcc_extensions = dcc.extensions() or list()
