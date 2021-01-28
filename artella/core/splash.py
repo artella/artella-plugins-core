@@ -342,27 +342,28 @@ class DownloadSplashDialog(ProgressSplashDialog, object):
         # download_item.setVisible(True)
 
 
-class DownloadItemWidget(QtWidgets.QWidget):
-    def __init__(self, file_path, parent=None):
-        super(DownloadItemWidget, self).__init__(parent)
+if qtutils.QT_AVAILABLE:
+    class DownloadItemWidget(QtWidgets.QWidget):
+        def __init__(self, file_path, parent=None):
+            super(DownloadItemWidget, self).__init__(parent)
 
-        download_layout = QtWidgets.QHBoxLayout()
-        self.setLayout(download_layout)
+            download_layout = QtWidgets.QHBoxLayout()
+            self.setLayout(download_layout)
 
-        self._path_label = QtWidgets.QLabel(os.path.basename(file_path))
-        self._progress_text = QtWidgets.QLabel('Waiting ...')
-        self._progress = ProgressCricle(width=qtutils.dpi_scale(35))
-        # self._progress.setTextVisible(False)
-        download_layout.addWidget(self._progress)
-        download_layout.addWidget(self._path_label)
-        download_layout.addStretch()
-        download_layout.addWidget(self._progress_text)
-        download_layout.addStretch()
+            self._path_label = QtWidgets.QLabel(os.path.basename(file_path))
+            self._progress_text = QtWidgets.QLabel('Waiting ...')
+            self._progress = ProgressCricle(width=qtutils.dpi_scale(35))
+            # self._progress.setTextVisible(False)
+            download_layout.addWidget(self._progress)
+            download_layout.addWidget(self._path_label)
+            download_layout.addStretch()
+            download_layout.addWidget(self._progress_text)
+            download_layout.addStretch()
 
-        self._progress_text.setVisible(False)
+            self._progress_text.setVisible(False)
 
-    def set_status(self, status, progress=None):
-        status = status or ''
-        self._progress_text.setText(str(status))
-        if progress is not None:
-            self._progress.setValue(progress)
+        def set_status(self, status, progress=None):
+            status = status or ''
+            self._progress_text.setText(str(status))
+            if progress is not None:
+                self._progress.setValue(progress)
