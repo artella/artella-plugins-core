@@ -111,7 +111,7 @@ class BaseArtellaDccPlugin(object):
 
         return plugin_version
 
-    def init(self, dev=False, show_dialogs=True, create_menu=True, create_callbacks=True, *args, **kwargs):
+    def init(self, dev=False, show_dialogs=True, create_menu=True, create_callbacks=True,  *args, **kwargs):
         """
         Initializes Artella plugin in current DCC.
 
@@ -137,7 +137,9 @@ class BaseArtellaDccPlugin(object):
             dcc.execute_deferred(self.create_menus)
 
         # Initialize Artella Drive client
-        self.init_client(show_dialogs=show_dialogs)
+        _init_client = kwargs.pop('init_client', True)
+        if _init_client:
+            self.init_client(show_dialogs=show_dialogs)
 
         logger.debug('trying to create quit signal ...')
         if qtutils.QT_AVAILABLE:
@@ -1124,6 +1126,7 @@ class BaseArtellaDccPlugin(object):
                     finally:
                         self._lock.release()
 
+                @QtCore.Slot()
                 def _do_invoke(self):
                     """
                     Internal function that executes the function

@@ -110,7 +110,8 @@ def init(
 
     # Initialize Artella DCC plugin
     dccplugin.DccPlugin(artella_drive_client).init(
-        dev=dev, show_dialogs=False, create_menu=create_menu, create_callbacks=create_callbacks)
+        dev=dev, show_dialogs=False, create_menu=create_menu, create_callbacks=create_callbacks,
+        init_client=init_client)
 
     if not dev:
         updater_plugin = plugins.get_plugin_by_id('artella-plugins-updater')
