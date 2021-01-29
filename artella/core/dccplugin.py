@@ -165,7 +165,6 @@ class BaseArtellaDccPlugin(object):
 
         artella_drive_client = self._artella_drive_client or self.get_client(show_dialogs=show_dialogs)
         if artella_drive_client:
-            artella_drive_client.artella_drive_listen()
             self.setup_project(artella_drive_client.get_local_root())
         else:
             logger.warning(
