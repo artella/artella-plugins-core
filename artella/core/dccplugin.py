@@ -166,6 +166,7 @@ class BaseArtellaDccPlugin(object):
         artella_drive_client = self._artella_drive_client or self.get_client(show_dialogs=show_dialogs)
         if artella_drive_client:
             self.setup_project(artella_drive_client.get_local_root())
+            artella_drive_client.artella_drive_listen()
         else:
             logger.warning(
                 'Artella Drive Client was not initialized. Artella server '
@@ -1063,7 +1064,8 @@ class BaseArtellaDccPlugin(object):
         if dcc_main_thread_fn:
             return dcc_main_thread_fn(fn, *args, **kwargs)
         else:
-            invoker = (self._main_thread_invoker if invoker_id == self._SYNC_INVOKER else self._main_thread_async_invoker)
+            invoker = (
+                self._main_thread_invoker if invoker_id == self._SYNC_INVOKER else self._main_thread_async_invoker)
             if invoker:
                 if QtWidgets.QApplication.instance() and (
                         QtCore.QThread.currentThread() != QtWidgets.QApplication.instance().thread()):

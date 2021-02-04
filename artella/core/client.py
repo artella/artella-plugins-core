@@ -27,7 +27,7 @@ except ImportError:
     from urllib import urlencode
     from urllib2 import urlopen, Request, HTTPError, URLError
 
-import artella
+from artella import dcc
 from artella.core import consts, utils, exceptions, dccplugin
 
 logger = logging.getLogger('artella')
@@ -200,8 +200,6 @@ class ArtellaDriveClient(object):
         :return: List of available remote sessions received from Artella Drive App.
         :rtype: list(str)
         """
-
-        from artella import dcc
 
         def _ping_remote_sessions():
             rsp = self.ping()
