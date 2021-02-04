@@ -88,6 +88,11 @@ def init(
         artella_logger.error('Impossible to load Artella Plugin because no DCC is available!')
         return False
 
+    # Due to the TCP server, Artella plugin freezes some DCCs (such as Maya) if its execute in batch mode (through
+    # console). For now we skip Artella plugin initialization in that scenario.
+    if dcc.is_batch():
+        return False
+
     shutdown(dev=dev)
 
     # Specific DCC extensions are managed by the client
