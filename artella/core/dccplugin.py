@@ -13,6 +13,7 @@ import logging
 import threading
 
 from artella import dcc
+from artella.core.dcc import parser
 from artella.core import utils, qtutils, callbacks, splash
 from artella.widgets import snackbar
 
@@ -568,8 +569,8 @@ class BaseArtellaDccPlugin(object):
             if dcc.scene_name() != file_path:
                 dcc.open_scene(file_path, save=True)
 
-            parser = artella.Parser()
-            valid_convert, updated_paths = parser.update_paths(local_path)
+            dcc_parser = parser.Parser()
+            valid_convert, updated_paths = dcc_parser.update_paths(local_path)
             updated_paths = utils.force_list(updated_paths)
             converted_paths.extend(updated_paths)
 
