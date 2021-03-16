@@ -271,6 +271,20 @@ def file_status(file_paths, include_remote=False):
     return client.status(file_paths, include_remote=include_remote)
 
 
+def async_execute_in_main_thread(fn, *args, **kwargs):
+    """
+    Executes the given function in the main thread when called from a non-main thread. This call will return
+    immediately and will not wait for the code to be executed in the main thread.
+
+    :param fn: function to call
+    :param args:
+    :param kwargs:
+    :return:
+    """
+
+    return dccplugin.DccPlugin().async_execute_in_main_thread(fn=fn, *args, **kwargs)
+
+
 def show_success_message(text, title='', duration=None, closable=True):
     """
     Shows an info message
