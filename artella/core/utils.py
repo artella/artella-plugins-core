@@ -9,7 +9,6 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
-import imp
 import time
 import json
 import shutil
@@ -19,6 +18,10 @@ import logging
 import importlib
 import subprocess
 from functools import wraps
+try:
+    from importlib.machinery import SourceFileLoader
+except ImportError:
+    import imp
 
 logger = logging.getLogger('artella')
 
@@ -350,7 +353,10 @@ def import_module(module_path, name=None, skip_exceptions=False):
             module_path = clean_path(os.path.join(module_path, '__init__.py'))
             if not os.path.exists(module_path):
                 raise ValueError('Cannot find module path: "{}"'.format(module_path))
-        return imp.load_source(name, os.path.realpath(module_path))
+        if is_python2():
+            return imp.load_source(name, os.path.realpath(module_path))
+        else:
+            return SourceFileLoader(name, os.path.realpath(module_path)).load_module()
     except ImportError:
         logger.error('Failed to load module: "{}"'.format(module_path))
         return None
@@ -463,7 +469,8 @@ def timestamp(f):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         res = f(*args, **kwargs)
-        logger.info('<{}> Elapsed time : {}'.format(f.func_name, time.time() - start_time))
+        func_name = f.func_name if is_python2() else f.__name__
+        logger.info('<{}> Elapsed time : {}'.format(func_name, time.time() - start_time))
         return res
     return wrapper
 

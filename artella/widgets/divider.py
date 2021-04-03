@@ -66,7 +66,7 @@ else:
         def get_artella_text(self):
             return self._text
 
-        artella_text = QtCore.Property(basestring, get_artella_text, set_artella_text)
+        artella_text = QtCore.Property(str, get_artella_text, set_artella_text)
 
         @classmethod
         def left(cls, text=''):

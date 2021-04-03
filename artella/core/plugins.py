@@ -201,14 +201,14 @@ def load_registered_plugins(dev=False):
         plugin_index = plugin_class.INDEX or -1
         index = 0
         for i, plugin_item in enumerate(ordered_plugins_list):
-            plugin_item_index = plugin_item.values()[0]['index']
+            plugin_item_index = list(plugin_item.values())[0]['index']
             if plugin_index < plugin_item_index:
                 index += 1
         ordered_plugins_list.insert(index, {plugin_id: {'index': plugin_index, 'dict': plugin_dict}})
 
     for plugin_item in ordered_plugins_list:
-        plugin_id = plugin_item.keys()[0]
-        plugin_dict = plugin_item.values()[0]['dict']
+        plugin_id = list(plugin_item.keys())[0]
+        plugin_dict = list(plugin_item.values())[0]['dict']
         plugin_class = plugin_dict['class']
         plugin_config_dict = plugin_dict.get('config', dict())
         try:

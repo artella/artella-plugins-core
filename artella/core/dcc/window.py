@@ -52,13 +52,13 @@ else:
             self._pos_anim.setTargetObject(self)
             self._pos_anim.setEasingCurve(QtCore.QEasingCurve.OutCubic)
             self._pos_anim.setDuration(300)
-            self._pos_anim.setPropertyName('pos')
+            self._pos_anim.setPropertyName(b'pos')
 
             self._opacity_anim = QtCore.QPropertyAnimation()
             self._opacity_anim.setTargetObject(self)
             self._opacity_anim.setEasingCurve(QtCore.QEasingCurve.OutCubic)
             self._opacity_anim.setDuration(300)
-            self._opacity_anim.setPropertyName('windowOpacity')
+            self._opacity_anim.setPropertyName(b'windowOpacity')
             self._opacity_anim.setStartValue(0.0)
             self._opacity_anim.setEndValue(1.0)
 

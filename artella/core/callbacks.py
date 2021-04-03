@@ -78,7 +78,7 @@ def register(callback_type, fn):
     if callback_type.endswith('Callback'):
         callback_type = callback_type.replace('Callback', '')
 
-    if callback_type in ARTELLA_CALLBACKS_CACHE.keys():
+    if callback_type in list(ARTELLA_CALLBACKS_CACHE.keys()):
         ARTELLA_CALLBACKS_CACHE[callback_type].register(fn)
 
 
@@ -92,7 +92,7 @@ def unregister(callback_type, fn):
     if isinstance(callback_type, (list, tuple)):
         callback_type = callback_type[0]
 
-    if callback_type in ARTELLA_CALLBACKS_CACHE.keys():
+    if callback_type in list(ARTELLA_CALLBACKS_CACHE.keys()):
         ARTELLA_CALLBACKS_CACHE[callback_type].unregister(fn)
 
 

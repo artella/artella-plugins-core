@@ -17,6 +17,7 @@ import random
 import hashlib
 import logging
 import threading
+import traceback
 from collections import OrderedDict
 try:
     from urllib.parse import urlparse, urlencode, urlunparse
@@ -511,7 +512,7 @@ class ArtellaDriveClient(object):
         path = utils.clean_path(os.path.expanduser(os.path.expandvars(path)))
 
         local_root = self.get_local_root()
-        local_project_names = (self.get_local_projects() or dict()).keys()
+        local_project_names = list((self.get_local_projects() or dict()).keys())
 
         for old_alr in consts.OLD_LOCAL_ROOTS:
             old_alr_str = '${}'.format(old_alr)
@@ -622,7 +623,7 @@ class ArtellaDriveClient(object):
         :rtype: str
         """
 
-        local_project_names = (self.get_local_projects() or dict()).keys()
+        local_project_names = list((self.get_local_projects() or dict()).keys())
 
         project_name = None
 
@@ -653,7 +654,7 @@ class ArtellaDriveClient(object):
             logger.warning('Was not possible to retrieve Project ID from path: {}!'.format(file_path))
             return None
 
-        if project_name not in local_projects.keys():
+        if project_name not in list(local_projects.keys()):
             logger.warning(
                 'Was not possible to retrieve Project ID from path because project "{}" is not recognized!'.format(
                     project_name))
@@ -761,7 +762,7 @@ class ArtellaDriveClient(object):
         """
 
         path_handle_map = paths_to_handles(paths, as_dict=True)
-        handles = path_handle_map.values()
+        handles = list(path_handle_map.values())
         if not path_handle_map or not handles:
             return dict()
         logger.debug('Handles: "{}"'.format(handles))
@@ -774,11 +775,14 @@ class ArtellaDriveClient(object):
         }
         if version is not None:
             payload['version'] = int(version)
-        req = Request('http://{}:{}/v2/localserve/transfer/download'.format(self._host, self._port))
-        rsp = self._communicate(req, json.dumps(payload).encode())
+        try:
+            req = Request('http://{}:{}/v2/localserve/transfer/download'.format(self._host, self._port))
+            rsp = self._communicate(req, json.dumps(payload).encode())
+        except Exception:
+            rsp = {'error': traceback.format_exc()}
         if 'error' in rsp:
             logger.warning(
-                'Unable to download file paths "{}" "{}"'.format(path_handle_map.keys(), rsp.get('error')))
+                'Unable to download file paths "{}" "{}"'.format(list(path_handle_map.keys()), rsp.get('error')))
             return rsp
 
         return self._track_response(rsp)
@@ -873,7 +877,7 @@ class ArtellaDriveClient(object):
         rsp = self._communicate(req, json.dumps(payload).encode())
         if 'error' in rsp:
             logger.warning(
-                'Unable to upload file paths "{}" "{}"'.format(path_handle_map.keys(), rsp.get('error')))
+                'Unable to upload file paths "{}" "{}"'.format(list(path_handle_map.keys()), rsp.get('error')))
             return rsp
 
         return self._track_response(rsp)
