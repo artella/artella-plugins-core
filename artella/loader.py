@@ -32,7 +32,7 @@ def create_logger():
 def register_dcc_paths(dcc_paths=None):
 
     # Register DCC paths
-    dccs_path = dcc_paths or list()
+    dccs_path = utils.force_list(dcc_paths)
     valid_dcc_paths = list()
     dcc_paths_str = ''
     default_dccs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dccs')
