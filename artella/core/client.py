@@ -721,7 +721,14 @@ class ArtellaDriveClient(object):
         file_paths = utils.force_list(file_paths, remove_duplicates=True)
         result = list()
 
+        # Make sure that paths are clean
+        file_paths = [utils.clean_path(file_path) for file_path in file_paths]
+
         for file_path in file_paths:
+            try:
+                file_path = file_path.decode('utf-8')
+            except UnicodeDecodeError:
+                file_path = file_path.decode('latin-1')
             uri_path = path_to_uri(file_path) if not is_uri_path(file_path) else file_path
             uri_parts = urlparse(uri_path)
             params = urlencode({'handle': uri_parts.path, 'include-remote': str(bool(include_remote)).lower()})
