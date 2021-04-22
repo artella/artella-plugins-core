@@ -81,8 +81,15 @@ def current_dcc():
                     if DCCS[dcc_folder] not in sys.path:
                         sys.path.append(DCCS[dcc_folder])
 
+    # Make sure standalone DCC is the last one checked
+    dcc_names = list(DCCS.keys())
+    standalone_names = [dcc_name for dcc_name in dcc_names if 'standalone' in dcc_name]
+    for standalone_name in standalone_names:
+        dcc_names.pop(dcc_names.index(standalone_name))
+        dcc_names.append(standalone_name)
+
     # Loop through all available DCCs and check which one is available in current session
-    for dcc_name, dcc_dir in DCCS.items():
+    for dcc_name in dcc_names:
         dcc_namespace_split = dcc_name.split('-')
         dcc_names = [dcc_name, dcc_namespace_split[-1]] if dcc_namespace_split else [dcc_name]
         for dcc in dcc_names:
