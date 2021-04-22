@@ -11,6 +11,7 @@ import os
 import sys
 import inspect
 import logging
+import traceback
 
 from artella import dcc
 from artella.core import consts, utils, plugin
@@ -213,8 +214,9 @@ def load_registered_plugins(dev=False):
         plugin_config_dict = plugin_dict.get('config', dict())
         try:
             plugin_inst = plugin_class(plugin_config_dict)
-        except Exception as exc:
-            logger.error('Impossible to instantiate Artella Plugin: "{}" | {}'.format(plugin_id, exc))
+        except Exception:
+            logger.error('Impossible to instantiate Artella Plugin: "{}"'.format(plugin_id))
+            logger.error(traceback.format_exc())
             continue
         _PLUGINS[plugin_id]['plugin_instance'] = plugin_inst
 
