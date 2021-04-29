@@ -117,7 +117,11 @@ def translate_path(file_path):
     "C:/Users/Tomi/artella/data/ProjectA/Assets/Characters/A/Model/a.ma"
     """
 
-    return dccplugin.DccPlugin().translate_path(file_path)
+    translated_path = dccplugin.DccPlugin().translate_path(file_path)
+    if isinstance(translated_path, dict):
+        return ''
+
+    return translated_path
 
 
 def is_artella_path(file_path=None):
