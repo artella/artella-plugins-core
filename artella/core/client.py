@@ -424,12 +424,13 @@ class ArtellaDriveClient(object):
 
         req = Request('http://{}:{}/v2/localserve/kv/settings/workspace'.format(self._host, self._port))
         local_root = self._communicate(req)
-        if not local_root or (isinstance(local_root, dict) and 'error' in local_root):
+        if not local_root or (isinstance(local_root, dict)):
             alr = os.environ.get(consts.ALR, None)
             if alr:
                 logger.warning('Unable to get local storage root. Using env var instead: "{}"'.format(consts.ALR))
                 local_root = alr
             else:
+                local_root = ''
                 logger.error('Unable to get local storage root.')
                 logger.info(
                     'Check that the local Artella Drive service is running and you have a working internet connection.')
