@@ -90,7 +90,10 @@ def clean_path(path):
         if isinstance(path, str):
             path = os.path.expanduser(path)
         else:
-            path = os.path.expanduser(str(path.encode('utf-8')))
+            try:
+                path = os.path.expanduser(str(path.encode('latin1')))
+            except Exception:
+                path = os.path.expanduser(str(path.encode('utf-8')))
     path = str(path.replace('\\', '/').replace('//', '/').rstrip('/').strip())
 
     # Fix server paths
