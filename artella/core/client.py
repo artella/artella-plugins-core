@@ -732,7 +732,8 @@ class ArtellaDriveClient(object):
                 file_path = file_path.decode('latin-1')
             uri_path = path_to_uri(file_path) if not is_uri_path(file_path) else file_path
             uri_parts = urlparse(uri_path)
-            params = urlencode({'handle': uri_parts.path, 'include-remote': str(bool(include_remote)).lower()})
+            uri_handle = utils.clean_path(uri_parts.path)
+            params = urlencode({'handle': uri_handle, 'include-remote': str(bool(include_remote)).lower()})
             req = Request('http://{}:{}/v2/localserve/fileinfo?{}'.format(
                 self._host, self._port, params))
             rsp = self._communicate(req)

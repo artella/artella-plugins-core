@@ -18,6 +18,7 @@ import logging
 import importlib
 import subprocess
 from functools import wraps
+
 try:
     from importlib.machinery import SourceFileLoader
 except ImportError:
@@ -91,9 +92,9 @@ def clean_path(path):
             path = os.path.expanduser(path)
         else:
             try:
-                path = os.path.expanduser(str(path.encode('latin1')))
-            except Exception:
                 path = os.path.expanduser(str(path.encode('utf-8')))
+            except Exception:
+                path = os.path.expanduser(str(path.encode('latin1')))
     path = str(path.replace('\\', '/').replace('//', '/').rstrip('/').strip())
 
     # Fix server paths

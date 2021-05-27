@@ -610,6 +610,8 @@ class BaseArtellaDccPlugin(object):
                 logger.warning(msg)
                 return False
 
+        file_path = utils.clean_path(file_path)
+
         can_lock = artella_drive_client.can_lock_file(file_path=file_path)
         if not can_lock:
             msg = 'Unable to lock file to make new version. File is already locked by other user.'
